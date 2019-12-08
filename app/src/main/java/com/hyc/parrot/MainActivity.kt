@@ -39,13 +39,4 @@ class MainActivity : BaseActivity() {
     startActivity(Intent(this, SecondActivity::class.java).putExtras(bundle))
   }
 
-  private fun printParam() {
-    Log.d("MainActivity", "$int")
-    Log.d("MainActivity", "$long")
-    Log.d("MainActivity", "$double")
-    Log.d("MainActivity", "$float")
-    Log.d("MainActivity", string)
-    Log.d("MainActivity", "$userBean")
-  }
-
 }
