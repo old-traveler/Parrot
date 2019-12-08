@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import com.hyc.parrot.InitialClassParam
 import com.hyc.parrot.InitialParam
 import java.lang.reflect.Field
 
@@ -28,21 +29,35 @@ object Parrot {
     }
   }
 
-  private fun initParamInternal(bundle: Bundle, any: Any) {
+  private fun initParamInternal(bundle: Bundle, any: Any, isClassParam: Boolean = false) {
     val fields = any.javaClass.declaredFields
     val keySet = bundle.keySet()
     fields?.forEach { field ->
-      val paramName = getParamName(field)
-      val key = paramName.belongToSet(keySet)
-      if (key?.isNotEmpty() == true) {
-        keySet.remove(key)
+      if (isInitialClassParam(field)) {
         field.isAccessible = true
-        invokeField(bundle.get(key), field, any)
+        val param = field.get(any) ?: field.type.newInstance()
+        initParamInternal(bundle, param, true)
+        field.set(any, param)
+      } else {
+        val paramName = getParamName(field)
+        val key = paramName.belongToSet(keySet)
+        if (key?.isNotEmpty() == true) {
+          field.isAccessible = true
+          invokeField(bundle.get(key), field, any)
+          keySet.remove(key)
+        }
       }
     }
-    keySet?.forEach{
-      Log.e(tag,"key: $it not deal")
+    if (!isClassParam) {
+      keySet?.forEach {
+        Log.e(tag, "key: $it not deal")
+      }
     }
+
+  }
+
+  private fun isInitialClassParam(field: Field): Boolean {
+    return field.getAnnotation(InitialClassParam::class.java) != null
   }
 
   private fun invokeField(data: Any?, field: Field, any: Any) {

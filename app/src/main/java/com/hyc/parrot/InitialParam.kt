@@ -19,3 +19,9 @@ annotation class InitialParam(
 
   val alternate: Array<String> = []
 )
+
+@kotlin.annotation.Retention(RUNTIME)
+@kotlin.annotation.Target(
+  FIELD
+)
+annotation class InitialClassParam

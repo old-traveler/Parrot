@@ -23,6 +23,7 @@ class MainActivity : BaseActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    printParam()
     val bundle = Bundle()
     bundle.putInt("int", int)
     bundle.putLong("long", long)
@@ -35,8 +36,24 @@ class MainActivity : BaseActivity() {
     bundle.putString("longString", longString)
     jsonObject = Gson().toJson(UserBean("杨静","666",21,154.0f))
     bundle.putString("jsonObject", jsonObject)
+    bundle.putString("name", "用户")
+    bundle.putString("personId", "4304331885039485")
     bundle.putSerializable("userBean", userBean)
     startActivity(Intent(this, SecondActivity::class.java).putExtras(bundle))
+  }
+
+  private fun printParam(){
+    Log.d("MainActivity","$int")
+    Log.d("MainActivity","$long")
+    Log.d("MainActivity","$double")
+    Log.d("MainActivity","$float")
+    Log.d("MainActivity", string)
+    Log.d("MainActivity","$userBean")
+    Log.d("MainActivity","$intString")
+    Log.d("MainActivity","$longString")
+    Log.d("MainActivity","$doubleString")
+    Log.d("MainActivity","$floatString")
+    Log.d("MainActivity","$jsonObject")
   }
 
 }
