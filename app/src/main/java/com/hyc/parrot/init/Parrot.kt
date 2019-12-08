@@ -33,7 +33,14 @@ object Parrot {
     val fields = any.javaClass.declaredFields
     val keySet = bundle.keySet()
     fields?.forEach { field ->
-      if (isInitialClassParam(field)) {
+      val initialClassParam = getInitialClassParam(field)
+      if (initialClassParam?.construction == true) {
+        field.isAccessible = true
+        val constructorInfo = getConstructorInfo(field, keySet, bundle)
+        val constructor = field.type.getDeclaredConstructor(*constructorInfo.first)
+        val param = constructor.newInstance(*constructorInfo.second)
+        field.set(any, param)
+      } else if (initialClassParam != null) {
         field.isAccessible = true
         val param = field.get(any) ?: field.type.newInstance()
         initParamInternal(bundle, param, true)
@@ -56,8 +63,28 @@ object Parrot {
 
   }
 
-  private fun isInitialClassParam(field: Field): Boolean {
-    return field.getAnnotation(InitialClassParam::class.java) != null
+  private fun getConstructorInfo(
+    field: Field,
+    keySet: MutableSet<String>,
+    bundle: Bundle
+  ): Pair<Array<Class<*>>, Array<Any?>> {
+    val clazzList = mutableListOf<Class<*>>()
+    val values = mutableListOf<Any?>()
+    val fields = field.type.declaredFields
+    fields.forEach {
+      it.isAccessible = true
+      val paramName = getParamName(it)
+      val key = paramName.belongToSet(keySet)
+      clazzList.add(it.type)
+      values.add(bundle.get(key))
+      key?.let { keySet.remove(key) }
+    }
+    return Pair(clazzList.toTypedArray(), values.toTypedArray())
+
+  }
+
+  private fun getInitialClassParam(field: Field): InitialClassParam? {
+    return field.getAnnotation(InitialClassParam::class.java)
   }
 
   private fun invokeField(data: Any?, field: Field, any: Any) {

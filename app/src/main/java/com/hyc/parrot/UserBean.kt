@@ -14,6 +14,6 @@ data class UserBean (
   val height : Float
 ) :Serializable {
   override fun toString(): String {
-    return "username : $username\npassword : $password\nage : $age\nheight : $height"
+    return "\nusername : $username\npassword : $password\nage : $age\nheight : $height"
   }
 }

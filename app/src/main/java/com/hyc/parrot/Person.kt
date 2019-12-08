@@ -7,11 +7,11 @@ package com.hyc.parrot
  */
 
 data class Person(
-  var name : String? = null,
+  val name : String,
   @InitialParam("personId")
-  var id : String? = null
+  val id : String
 ){
   override fun toString(): String {
-    return "name：${name} id：$id"
+    return "\nname：${name} id：$id"
   }
 }

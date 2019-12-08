@@ -24,4 +24,6 @@ annotation class InitialParam(
 @kotlin.annotation.Target(
   FIELD
 )
-annotation class InitialClassParam
+annotation class InitialClassParam(
+  val construction: Boolean = false
+)

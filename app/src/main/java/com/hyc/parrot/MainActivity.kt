@@ -12,7 +12,7 @@ class MainActivity : BaseActivity() {
   private var double: Double = Double.MAX_VALUE
   private var float: Float = Float.MAX_VALUE
   private var string: String = "String"
-  private var userBean: UserBean = UserBean("贺宇成", "123", 22, 165.0f)
+  private var userBean: UserBean = UserBean("张三", "123", 22, 165.0f)
   private var intString : String = "int解析错误"
   private var longString : String = "444"
   private var doubleString : String = "555"
@@ -34,10 +34,12 @@ class MainActivity : BaseActivity() {
     bundle.putString("doubleString", doubleString)
     bundle.putString("floatString", floatString)
     bundle.putString("longString", longString)
-    jsonObject = Gson().toJson(UserBean("杨静","666",21,154.0f))
+    jsonObject = Gson().toJson(UserBean("李四","666",21,154.0f))
     bundle.putString("jsonObject", jsonObject)
-    bundle.putString("name", "用户")
+    bundle.putString("name", "新用户")
     bundle.putString("personId", "4304331885039485")
+    bundle.putString("className", "软件1502")
+    bundle.putString("studentId", "15508944320")
     bundle.putSerializable("userBean", userBean)
     startActivity(Intent(this, SecondActivity::class.java).putExtras(bundle))
   }

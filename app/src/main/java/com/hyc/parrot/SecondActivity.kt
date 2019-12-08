@@ -23,8 +23,10 @@ class SecondActivity : BaseActivity() {
   @InitialParam("jsonObject")
   private var user : UserBean? = null
   private var beike : UserBean = UserBean("贝壳","123",1,177.0f)
-  @InitialClassParam
+  @InitialClassParam(true)
   private lateinit var person : Person
+  @InitialClassParam
+  private lateinit var student: Student
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -46,6 +48,7 @@ class SecondActivity : BaseActivity() {
     Log.d("SecondActivity","$user")
     Log.d("SecondActivity","$beike")
     Log.d("SecondActivity","$person")
+    Log.d("SecondActivity","$student")
   }
 
 
