@@ -30,13 +30,18 @@ object Parrot {
 
   private fun initParamInternal(bundle: Bundle, any: Any) {
     val fields = any.javaClass.declaredFields
+    val keySet = bundle.keySet()
     fields?.forEach { field ->
       val paramName = getParamName(field)
-      val key = paramName.belongToSet(bundle.keySet())
+      val key = paramName.belongToSet(keySet)
       if (key?.isNotEmpty() == true) {
+        keySet.remove(key)
         field.isAccessible = true
         invokeField(bundle.get(key), field, any)
       }
+    }
+    keySet?.forEach{
+      Log.e(tag,"key: $it not deal")
     }
   }
 
@@ -132,7 +137,7 @@ object Parrot {
     initialParam ?: return ParamName(key = field.name)
     val fieldNames = mutableListOf<String>()
     fieldNames.add(field.name)
-    fieldNames.add(initialParam.value)
+    fieldNames.add(initialParam.key)
     fieldNames.addAll(initialParam.alternate)
     return ParamName(fieldNames = fieldNames)
   }

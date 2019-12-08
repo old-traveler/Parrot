@@ -19,6 +19,7 @@ class MainActivity : BaseActivity() {
   private var floatString : String = "666"
   private var jsonObject : String = ""
 
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)

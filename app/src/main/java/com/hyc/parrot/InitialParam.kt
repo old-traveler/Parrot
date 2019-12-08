@@ -14,12 +14,8 @@ import kotlin.annotation.AnnotationTarget.FIELD
   FIELD
 )
 annotation class InitialParam(
-  /**
-   * @return the desired name of the field when it is serialized or deserialized
-   */
-  val value: String,
-  /**
-   * @return the alternative names of the field when it is deserialized
-   */
+
+  val key: String,
+
   val alternate: Array<String> = []
 )
