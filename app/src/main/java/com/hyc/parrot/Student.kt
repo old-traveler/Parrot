@@ -7,8 +7,8 @@ package com.hyc.parrot
  */
 data class Student(
   @InitialParam("className")
-  var class_name : String?=null,
-  var studentId : String?=null
+  val class_name : String?=null,
+  val studentId : String?=null
 ){
   override fun toString(): String {
     return "\nclassName $class_name\nstudentId: $studentId"

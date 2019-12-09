@@ -9,7 +9,7 @@ package com.hyc.parrot
 data class Person(
   val name : String,
   @InitialParam("personId")
-  val id : String
+  val id : Long
 ){
   override fun toString(): String {
     return "\nname：${name} id：$id"

@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.hyc.parrot.InitialClassParam
 import com.hyc.parrot.InitialParam
+import java.lang.RuntimeException
 import java.lang.reflect.Field
 
 /**
@@ -19,7 +20,7 @@ object Parrot {
   private const val tag = "Parrot"
   private val mGson = Gson()
 
-  public fun initParam(bundle: Bundle, any: Any) {
+  fun initParam(bundle: Bundle, any: Any) {
     initParamInternal(bundle, any)
   }
 
@@ -34,15 +35,9 @@ object Parrot {
     val keySet = bundle.keySet()
     fields?.forEach { field ->
       val initialClassParam = getInitialClassParam(field)
-      if (initialClassParam?.construction == true) {
+      if (initialClassParam != null) {
         field.isAccessible = true
-        val constructorInfo = getConstructorInfo(field, keySet, bundle)
-        val constructor = field.type.getDeclaredConstructor(*constructorInfo.first)
-        val param = constructor.newInstance(*constructorInfo.second)
-        field.set(any, param)
-      } else if (initialClassParam != null) {
-        field.isAccessible = true
-        val param = field.get(any) ?: field.type.newInstance()
+        val param = field.get(any) ?: getParamInstance(field)
         initParamInternal(bundle, param, true)
         field.set(any, param)
       } else {
@@ -63,24 +58,34 @@ object Parrot {
 
   }
 
-  private fun getConstructorInfo(
-    field: Field,
-    keySet: MutableSet<String>,
-    bundle: Bundle
-  ): Pair<Array<Class<*>>, Array<Any?>> {
-    val clazzList = mutableListOf<Class<*>>()
-    val values = mutableListOf<Any?>()
-    val fields = field.type.declaredFields
-    fields.forEach {
-      it.isAccessible = true
-      val paramName = getParamName(it)
-      val key = paramName.belongToSet(keySet)
-      clazzList.add(it.type)
-      values.add(bundle.get(key))
-      key?.let { keySet.remove(key) }
+  private fun getParamInstance(
+    field: Field
+  ): Any {
+    if (field.type.declaredConstructors.isNullOrEmpty()) {
+      throw RuntimeException("class :${field.type} must have a constructor")
     }
-    return Pair(clazzList.toTypedArray(), values.toTypedArray())
-
+    val constructor = field.type.declaredConstructors[0]
+    val parameterTypes = constructor.parameterTypes
+    if (parameterTypes.isNullOrEmpty()) {
+      return constructor.newInstance()
+    }
+    val param = mutableListOf<Any?>()
+    constructor.parameterTypes?.forEach {
+      val value: Any? = when (it) {
+        Int::class.java -> 0
+        Float::class.java -> 0
+        Byte::class.java -> 0
+        Double::class.java -> 0
+        Long::class.java -> 0L
+        Char::class.java -> 0
+        Boolean::class.java -> false
+        Short::class.java -> 0
+        String::class.java -> ""
+        else -> null
+      }
+      param.add(value)
+    }
+    return constructor.newInstance(*param.toTypedArray())
   }
 
   private fun getInitialClassParam(field: Field): InitialClassParam? {
@@ -100,14 +105,22 @@ object Parrot {
     }
   }
 
+  private fun getJsonObject(data: String?, field: Field): Any? {
+    data ?: return null
+    var filedObject: Any? = null
+    try {
+      filedObject = mGson.fromJson(data, field.type)
+    } catch (e: JsonSyntaxException) {
+      e.printStackTrace()
+      Log.e(tag, "catch JsonSyntaxException")
+    }
+    return filedObject
+  }
+
   private fun invokeJsonObject(data: Any, field: Field, any: Any) {
     if (data is String) {
-      try {
-        val filedObject = mGson.fromJson(data, field.type)
-        invokeObject(filedObject, field, any)
-      } catch (e: JsonSyntaxException) {
-        e.printStackTrace()
-        Log.e(tag, "catch JsonSyntaxException")
+      getJsonObject(data, field)?.let {
+        invokeObject(it, field, any)
       }
     } else {
       Log.e(tag, "not deal type : ${data::class.java} field type: ${field.type}")
