@@ -1,4 +1,4 @@
-package com.hyc.parrot
+package com.hyc.parrot.init
 
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FIELD
@@ -15,7 +15,7 @@ import kotlin.annotation.AnnotationTarget.FIELD
 )
 annotation class InitialParam(
 
-  val key: String,
+  val key: String = "",
 
   val alternate: Array<String> = []
 )

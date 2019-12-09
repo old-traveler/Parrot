@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.hyc.parrot.InitialClassParam
-import com.hyc.parrot.InitialParam
 import java.lang.RuntimeException
 import java.lang.reflect.Field
 
@@ -192,7 +190,9 @@ object Parrot {
     initialParam ?: return ParamName(key = field.name)
     val fieldNames = mutableListOf<String>()
     fieldNames.add(field.name)
-    fieldNames.add(initialParam.key)
+    if (initialParam.key.isNotEmpty()) {
+      fieldNames.add(initialParam.key)
+    }
     fieldNames.addAll(initialParam.alternate)
     return ParamName(fieldNames = fieldNames)
   }

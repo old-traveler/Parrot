@@ -1,12 +1,14 @@
 package com.hyc.parrot
 
+import com.hyc.parrot.init.InitialParam
+
 /**
  * @author: 贺宇成
  * @date: 2019-12-08 20:20
  * @desc:
  */
 data class Student(
-  @InitialParam("className")
+  @InitialParam("class_name",alternate = ["className"])
   val class_name : String?=null,
   val studentId : String?=null
 ){
