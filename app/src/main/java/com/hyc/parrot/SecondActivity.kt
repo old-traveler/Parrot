@@ -27,8 +27,6 @@ class SecondActivity : BaseActivity() {
   private var user : UserBean? = null
   private var beike : UserBean = UserBean("贝壳","123",1,177.0f)
   @InitialClassParam
-  private lateinit var person : Person
-  @InitialClassParam
   private lateinit var student: Student
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +48,6 @@ class SecondActivity : BaseActivity() {
     Log.d("SecondActivity","$floatString")
     Log.d("SecondActivity","$user")
     Log.d("SecondActivity","$beike")
-    Log.d("SecondActivity","$person")
     Log.d("SecondActivity","$student")
   }
 

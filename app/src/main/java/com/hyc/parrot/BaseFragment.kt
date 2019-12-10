@@ -1,19 +1,19 @@
 package com.hyc.parrot
 
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import android.support.v4.app.Fragment
 import com.hyc.parrot.init.Parrot
 
 /**
  * @author: 贺宇成
- * @date: 2019-12-08 15:49
+ * @date: 2019-12-10 12:59
  * @desc:
  */
-open class BaseActivity : AppCompatActivity() {
+open class BaseFragment : Fragment() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    intent.extras?.let {
+    arguments?.let {
       initBundle(it)
     }
   }

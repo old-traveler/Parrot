@@ -14,12 +14,16 @@ import kotlin.annotation.AnnotationTarget.FIELD
   FIELD
 )
 annotation class InitialParam(
-
+  //Bundle解析key,可不填写，默认变量名称
   val key: String = "",
-
+  //支持多个alternate
   val alternate: Array<String> = []
 )
 
+/**
+ * 标识此参数是一个初始类型参数
+ * 即可将Bundle中的数据注入此类的属性中
+ */
 @kotlin.annotation.Retention(RUNTIME)
 @kotlin.annotation.Target(
   FIELD

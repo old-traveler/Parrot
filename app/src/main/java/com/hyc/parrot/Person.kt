@@ -12,8 +12,4 @@ data class Person(
   val name : String,
   @InitialParam("personId")
   val id : Long
-){
-  override fun toString(): String {
-    return "\nname：${name} id：$id"
-  }
-}
+)

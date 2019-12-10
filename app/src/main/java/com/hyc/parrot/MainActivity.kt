@@ -36,7 +36,7 @@ class MainActivity : BaseActivity() {
     bundle.putString("longString", longString)
     jsonObject = Gson().toJson(UserBean("李四","666",21,154.0f))
     bundle.putString("jsonObject", jsonObject)
-    bundle.putString("name", "新用户")
+    bundle.putString("name", "英语老师")
     bundle.putString("personId", "4304331885039485")
     bundle.putString("className", "软件1502")
     bundle.putString("studentId", "15508944320")
