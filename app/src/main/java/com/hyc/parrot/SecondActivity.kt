@@ -1,7 +1,9 @@
 package com.hyc.parrot
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import com.google.gson.Gson
 import com.hyc.parrot.init.InitialClassParam
 import com.hyc.parrot.init.InitialParam
 
@@ -33,6 +35,28 @@ class SecondActivity : BaseActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     printParam()
+    toThreeActivity()
+  }
+
+  private fun toThreeActivity() {
+    val bundle = Bundle()
+    bundle.putInt("int", int)
+    bundle.putLong("long", long)
+    bundle.putDouble("double", double)
+    bundle.putFloat("float", float)
+    bundle.putString("string", string)
+    bundle.putString("intString", "444")
+    bundle.putString("doubleString", "555")
+    bundle.putString("floatString", "666")
+    bundle.putString("longString", "777")
+    val jsonObject = Gson().toJson(UserBean("李四","666",21,154.0f))
+    bundle.putString("jsonObject", jsonObject)
+    bundle.putString("name", "英语老师")
+    bundle.putString("personId", "4304331885039485")
+    bundle.putString("className", "软件1502")
+    bundle.putString("studentId", "15508944320")
+    bundle.putSerializable("userBean", userBean)
+    startActivity(Intent(this, ThreeActivity::class.java).putExtras(bundle))
   }
 
   private fun printParam(){
@@ -50,10 +74,6 @@ class SecondActivity : BaseActivity() {
     Log.d("SecondActivity","$beike")
     Log.d("SecondActivity","$student")
   }
-
-
-
-
 
 
 }

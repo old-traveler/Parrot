@@ -6,6 +6,8 @@ import android.support.v4.app.Fragment
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import com.hyc.parrot.BuildConfig
+import java.lang.NumberFormatException
 import java.lang.RuntimeException
 import java.lang.reflect.Field
 
@@ -18,16 +20,31 @@ object Parrot {
 
   private const val tag = "Parrot"
   private val mGson = Gson()
+  private val enableLog = BuildConfig.DEBUG
 
   fun initParam(bundle: Bundle, any: Any) {
+    val startTime = System.currentTimeMillis()
     initParamInternal(bundle, any)
+    logD("initParam cost ${System.currentTimeMillis() - startTime}")
+  }
+
+  private fun logD(msg: String?) {
+    if (enableLog) {
+      Log.d(tag, msg)
+    }
+  }
+
+  private fun logE(msg: String?) {
+    if (enableLog) {
+      Log.e(tag, msg)
+    }
   }
 
   fun initParam(any: Any) {
-    var bundle : Bundle? = null
-    if (any is Activity){
+    var bundle: Bundle? = null
+    if (any is Activity) {
       bundle = any.intent?.extras
-    } else if (any is Fragment){
+    } else if (any is Fragment) {
       bundle = any.arguments
     }
     bundle?.let {
@@ -50,14 +67,15 @@ object Parrot {
         val key = paramName.belongToSet(keySet)
         if (key?.isNotEmpty() == true) {
           field.isAccessible = true
-          invokeField(bundle.get(key), field, any)
-          keySet.remove(key)
+          if (invokeField(bundle.get(key), field, any)){
+            keySet.remove(key)
+          }
         }
       }
     }
     if (!isClassParam) {
       keySet?.forEach {
-        Log.e(tag, "key: $it not deal")
+        logE("key: $it not deal in ${any::class.java.name} data : ${bundle.get(it)}")
       }
     }
 
@@ -97,17 +115,68 @@ object Parrot {
     return field.getAnnotation(InitialClassParam::class.java)
   }
 
-  private fun invokeField(data: Any?, field: Field, any: Any) {
-    data ?: return
-    when (field.type) {
-      Int::class.java -> invokeInt(data, field, any)
-      Long::class.java -> invokeLong(data, field, any)
-      Float::class.java -> invokeFloat(data, field, any)
-      Double::class.java -> invokeDouble(data, field, any)
-      String::class.java -> invokeString(data, field, any)
-      data::class.java -> invokeObject(data, field, any)
-      else -> invokeJsonObject(data, field, any)
+  private fun getType(any: Any) : Class<*>{
+    when(any){
+      is Int -> return Int::class.java
+      is Float -> return Float::class.java
+      is Byte -> return Byte::class.java
+      is Double -> return Double::class.java
+      is Long -> return Long::class.java
+      is Char -> return Char::class.java
+      is Boolean -> return Boolean::class.java
+      is Short -> return Short::class.java
+      is String -> return String::class.java
     }
+    return any::class.java
+  }
+
+
+  private fun invokeField(data: Any?, field: Field, any: Any): Boolean {
+    data ?: return false
+    if (data::class.java == field.type || getType(data) == field.type) {
+      invokeObject(data, field, any)
+    } else if (data::class.java == String::class.java && stringToData(
+        field,
+        data as? String,
+        any
+      )
+    ) {
+      logD("string to ${field.type} success  data: $data")
+    } else {
+      return false
+    }
+    return true
+  }
+
+  private fun stringToData(field: Field, string: String?, any: Any): Boolean {
+    if (string.isNullOrEmpty()) {
+      return false
+    }
+    try {
+      when (field.type) {
+        Int::class.java -> invokeObject(string.toInt(), field, any)
+        Float::class.java -> invokeObject(string.toFloat(), field, any)
+        Byte::class.java -> invokeObject(string.toByte(), field, any)
+        Double::class.java -> invokeObject(string.toDouble(), field, any)
+        Long::class.java -> invokeObject(string.toLong(), field, any)
+        Boolean::class.java -> invokeObject(string.toBoolean(), field, any)
+        Short::class.java -> invokeObject(string.toShort(), field, any)
+        String::class.java -> invokeObject(string, field, any)
+        Char::class.java -> {
+          if (string.length == 1) {
+            invokeObject(string[0], field, any)
+          } else {
+            return false
+          }
+        }
+        else -> return invokeJsonObject(string, field, any)
+      }
+      return true
+    } catch (e: NumberFormatException) {
+      e.printStackTrace()
+      logE("String to ${field.type} catch NumberFormatException data: $string")
+    }
+    return false
   }
 
   private fun getJsonObject(data: String?, field: Field): Any? {
@@ -117,79 +186,21 @@ object Parrot {
       filedObject = mGson.fromJson(data, field.type)
     } catch (e: JsonSyntaxException) {
       e.printStackTrace()
-      Log.e(tag, "catch JsonSyntaxException")
+      logE("parse ${field.type} catch JsonSyntaxException json :$data")
     }
     return filedObject
   }
 
-  private fun invokeJsonObject(data: Any, field: Field, any: Any) {
-    if (data is String) {
-      getJsonObject(data, field)?.let {
-        invokeObject(it, field, any)
-      }
-    } else {
-      Log.e(tag, "not deal type : ${data::class.java} field type: ${field.type}")
+  private fun invokeJsonObject(data: String, field: Field, any: Any): Boolean {
+    getJsonObject(data, field)?.let {
+      invokeObject(it, field, any)
+      return true
     }
+    return false
   }
 
   private fun invokeObject(data: Any, field: Field, any: Any) {
     field.set(any, data)
-  }
-
-  private fun invokeInt(data: Any, field: Field, any: Any) {
-    when (data) {
-      is Int -> field.set(any, data)
-      is String -> {
-        val int = data.toIntOrNull()
-        int?.let { field.set(any, it) }
-        int ?: Log.e(tag, "String toInt fail")
-      }
-      else -> Log.e(tag, "data not Int or String")
-    }
-  }
-
-  private fun invokeLong(data: Any, field: Field, any: Any) {
-    when (data) {
-      is Long -> field.set(any, data)
-      is String -> {
-        val long = data.toLongOrNull()
-        long?.let { field.set(any, it) }
-        long ?: Log.e(tag, "String toLong fail")
-      }
-      else -> Log.e(tag, "data not Long or String")
-    }
-  }
-
-  private fun invokeFloat(data: Any, field: Field, any: Any) {
-    when (data) {
-      is Float -> field.set(any, data)
-      is String -> {
-        val float = data.toFloatOrNull()
-        float?.let { field.set(any, float) }
-        float ?: Log.e(tag, "String toFloat fail")
-      }
-      else -> Log.e(tag, "data not Float or String")
-    }
-  }
-
-  private fun invokeDouble(data: Any, field: Field, any: Any) {
-    when (data) {
-      is Double -> field.set(any, data)
-      is String -> {
-        val double = data.toDoubleOrNull()
-        double?.let { field.set(any, double) }
-        double ?: Log.e(tag, "String toDouble fail")
-      }
-      else -> Log.e(tag, "data not Double or String")
-    }
-  }
-
-  private fun invokeString(data: Any, field: Field, any: Any) {
-    if (data is String) {
-      field.set(any, data)
-    } else {
-      Log.e(tag, "data not String")
-    }
   }
 
   private fun getParamName(field: Field): ParamName {
