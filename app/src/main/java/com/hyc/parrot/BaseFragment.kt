@@ -13,12 +13,7 @@ open class BaseFragment : Fragment() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    arguments?.let {
-      initBundle(it)
-    }
+    Parrot.initParam(this)
   }
 
-  open fun initBundle(bundle: Bundle) {
-    Parrot.initParam(bundle, this)
-  }
 }

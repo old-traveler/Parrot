@@ -1,7 +1,8 @@
 package com.hyc.parrot.init
 
-import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
+import android.support.v4.app.Fragment
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -22,8 +23,14 @@ object Parrot {
     initParamInternal(bundle, any)
   }
 
-  public fun initParam(intent: Intent, any: Any) {
-    intent.extras?.let {
+  fun initParam(any: Any) {
+    var bundle : Bundle? = null
+    if (any is Activity){
+      bundle = any.intent?.extras
+    } else if (any is Fragment){
+      bundle = any.arguments
+    }
+    bundle?.let {
       this.initParam(it, any)
     }
   }
