@@ -11,6 +11,7 @@ import java.lang.NumberFormatException
 import java.lang.RuntimeException
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
+import java.lang.reflect.ParameterizedType
 
 /**
  * @author: 贺宇成
@@ -137,9 +138,23 @@ object Parrot {
         return initialMapParam.bundleKey
       }
       Map::class.java -> {
+        val length = dataList.size
+        val valueType: Class<*>? =
+          (field.genericType as? ParameterizedType)?.actualTypeArguments?.getOrNull(1) as? Class<*>
+        if (valueType == String::class.java) {
+          for (index in 0 until length) {
+            dataList[index] = dataList.getOrNull(index)?.toString()
+          }
+        } else if (valueType != null && valueType != String::class.java) {
+          for (index in 0 until length) {
+            val value = dataList.getOrNull(index)
+            if (value != null && getType(value) == String::class.java) {
+              dataList[index] = getDataFromString(valueType, value as String)
+            }
+          }
+        }
         val map: MutableMap<String, Any?> =
           field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
-        val length = initialMapParam.bundleKey.size
         for (index in 0 until length) {
           map[initialMapParam.mapKey.getOrElse(index) { initialMapParam.bundleKey[index] }] =
             dataList[index]
