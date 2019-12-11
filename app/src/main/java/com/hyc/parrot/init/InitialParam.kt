@@ -28,4 +28,6 @@ annotation class InitialParam(
 @kotlin.annotation.Target(
   FIELD
 )
-annotation class InitialClassParam
+annotation class InitialClassParam(
+  val constructor : Array<String> = []
+)

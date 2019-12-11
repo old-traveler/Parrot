@@ -9,12 +9,13 @@ import com.google.gson.JsonSyntaxException
 import com.hyc.parrot.BuildConfig
 import java.lang.NumberFormatException
 import java.lang.RuntimeException
+import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 
 /**
  * @author: 贺宇成
  * @date: 2019-12-08 15:34
- * @desc: 自动解析init传参
+ * @desc: 自动注入Bundle数据到属性中
  */
 object Parrot {
 
@@ -22,7 +23,7 @@ object Parrot {
   private val mGson = Gson()
   private val enableLog = BuildConfig.DEBUG
 
-  fun initParam(bundle: Bundle, any: Any) {
+  private fun initParam(bundle: Bundle, any: Any) {
     val startTime = System.currentTimeMillis()
     initParamInternal(bundle, any)
     logD("initParam cost ${System.currentTimeMillis() - startTime}")
@@ -40,6 +41,7 @@ object Parrot {
     }
   }
 
+  @JvmStatic
   fun initParam(any: Any) {
     var bundle: Bundle? = null
     if (any is Activity) {
@@ -48,7 +50,7 @@ object Parrot {
       bundle = any.arguments
     }
     bundle?.let {
-      this.initParam(it, any)
+      initParam(it, any)
     }
   }
 
@@ -57,7 +59,15 @@ object Parrot {
     val keySet = bundle.keySet()
     fields?.forEach { field ->
       val initialClassParam = getInitialClassParam(field)
-      if (initialClassParam != null) {
+      if (initialClassParam != null && initialClassParam.constructor.isNotEmpty()) {
+        field.isAccessible = true
+        val param = initClassParamConstructor(field, bundle, initialClassParam)
+        param?.let {
+          invokeObject(param, field, any)
+          logD("data inject ${field.type} success  keys : ${initialClassParam.constructor}")
+          initialClassParam.constructor.forEach { keySet.remove(it) }
+        }
+      } else if (initialClassParam != null) {
         field.isAccessible = true
         val param = field.get(any) ?: getParamInstance(field)
         initParamInternal(bundle, param, true)
@@ -67,7 +77,7 @@ object Parrot {
         val key = paramName.belongToSet(keySet)
         if (key?.isNotEmpty() == true) {
           field.isAccessible = true
-          if (invokeField(bundle.get(key), field, any)){
+          if (invokeField(bundle.get(key), field, any)) {
             keySet.remove(key)
           }
         }
@@ -78,7 +88,65 @@ object Parrot {
         logE("key: $it not deal in ${any::class.java.name} data : ${bundle.get(it)}")
       }
     }
+  }
 
+  private fun initClassParamConstructor(
+    field: Field,
+    bundle: Bundle,
+    initialClassParam: InitialClassParam
+  ): Any? {
+    var constructor: Constructor<*>? = null
+    field.type.declaredConstructors?.forEach {
+      if (it.parameterTypes?.size == initialClassParam.constructor.size) {
+        constructor = it
+        return@forEach
+      }
+    }
+    constructor ?: return null
+    val parameterTypes = constructor?.parameterTypes
+    val params = mutableListOf<Any?>()
+    val length = initialClassParam.constructor.size
+    for (index in 0 until length) {
+      val data = bundle.get(initialClassParam.constructor[index])
+      val paramType = parameterTypes?.getOrNull(index)
+      if (data != null && paramType != null) {
+        when (getType(data)) {
+          paramType -> params.add(data)
+          String::class.java -> params.add(getDataFromString(paramType, data as String))
+          else -> params.add(null)
+        }
+      } else {
+        params.add(null)
+      }
+    }
+    return constructor?.newInstance(*params.toTypedArray())
+  }
+
+  private fun getDataFromString(clazz: Class<*>, string: String): Any? {
+    try {
+      when (clazz) {
+        Int::class.java -> return string.toInt()
+        Float::class.java -> return string.toFloat()
+        Byte::class.java -> return string.toByte()
+        Double::class.java -> return string.toDouble()
+        Long::class.java -> return string.toLong()
+        Boolean::class.java -> return string.toBoolean()
+        Short::class.java -> return string.toShort()
+        String::class.java -> return string
+        Char::class.java -> {
+          return if (string.length == 1) {
+            string[0]
+          } else {
+            null
+          }
+        }
+        else -> return getJsonObject(string, clazz)
+      }
+    } catch (e: NumberFormatException) {
+      e.printStackTrace()
+      logE("String to $clazz catch NumberFormatException data: $string")
+    }
+    return null
   }
 
   private fun getParamInstance(
@@ -115,8 +183,8 @@ object Parrot {
     return field.getAnnotation(InitialClassParam::class.java)
   }
 
-  private fun getType(any: Any) : Class<*>{
-    when(any){
+  private fun getType(any: Any): Class<*> {
+    when (any) {
       is Int -> return Int::class.java
       is Float -> return Float::class.java
       is Byte -> return Byte::class.java
@@ -130,10 +198,9 @@ object Parrot {
     return any::class.java
   }
 
-
   private fun invokeField(data: Any?, field: Field, any: Any): Boolean {
     data ?: return false
-    if (data::class.java == field.type || getType(data) == field.type) {
+    if (getType(data) == field.type) {
       invokeObject(data, field, any)
     } else if (data::class.java == String::class.java && stringToData(
         field,
@@ -152,51 +219,23 @@ object Parrot {
     if (string.isNullOrEmpty()) {
       return false
     }
-    try {
-      when (field.type) {
-        Int::class.java -> invokeObject(string.toInt(), field, any)
-        Float::class.java -> invokeObject(string.toFloat(), field, any)
-        Byte::class.java -> invokeObject(string.toByte(), field, any)
-        Double::class.java -> invokeObject(string.toDouble(), field, any)
-        Long::class.java -> invokeObject(string.toLong(), field, any)
-        Boolean::class.java -> invokeObject(string.toBoolean(), field, any)
-        Short::class.java -> invokeObject(string.toShort(), field, any)
-        String::class.java -> invokeObject(string, field, any)
-        Char::class.java -> {
-          if (string.length == 1) {
-            invokeObject(string[0], field, any)
-          } else {
-            return false
-          }
-        }
-        else -> return invokeJsonObject(string, field, any)
-      }
-      return true
-    } catch (e: NumberFormatException) {
-      e.printStackTrace()
-      logE("String to ${field.type} catch NumberFormatException data: $string")
-    }
-    return false
-  }
-
-  private fun getJsonObject(data: String?, field: Field): Any? {
-    data ?: return null
-    var filedObject: Any? = null
-    try {
-      filedObject = mGson.fromJson(data, field.type)
-    } catch (e: JsonSyntaxException) {
-      e.printStackTrace()
-      logE("parse ${field.type} catch JsonSyntaxException json :$data")
-    }
-    return filedObject
-  }
-
-  private fun invokeJsonObject(data: String, field: Field, any: Any): Boolean {
-    getJsonObject(data, field)?.let {
+    getDataFromString(field.type, string)?.let {
       invokeObject(it, field, any)
       return true
     }
     return false
+  }
+
+  private fun getJsonObject(data: String?, type: Class<*>): Any? {
+    data ?: return null
+    var filedObject: Any? = null
+    try {
+      filedObject = mGson.fromJson(data, type)
+    } catch (e: JsonSyntaxException) {
+      e.printStackTrace()
+      logE("parse $type catch JsonSyntaxException json :$data")
+    }
+    return filedObject
   }
 
   private fun invokeObject(data: Any, field: Field, any: Any) {
