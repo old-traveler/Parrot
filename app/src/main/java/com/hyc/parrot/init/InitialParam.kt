@@ -29,5 +29,15 @@ annotation class InitialParam(
   FIELD
 )
 annotation class InitialClassParam(
-  val constructor : Array<String> = []
+  val constructor: Array<String> = []
 )
+
+@kotlin.annotation.Retention(RUNTIME)
+@kotlin.annotation.Target(
+  FIELD
+)
+annotation class InitialMapParam(
+  val bundleKey: Array<String> = [],
+  val mapKey: Array<String> = []
+)
+

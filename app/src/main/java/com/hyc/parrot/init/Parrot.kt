@@ -23,7 +23,8 @@ object Parrot {
   private val mGson = Gson()
   private val enableLog = BuildConfig.DEBUG
 
-  private fun initParam(bundle: Bundle, any: Any) {
+  @JvmStatic
+  fun initParam(bundle: Bundle, any: Any) {
     val startTime = System.currentTimeMillis()
     initParamInternal(bundle, any)
     logD("initParam cost ${System.currentTimeMillis() - startTime}")
@@ -54,23 +55,36 @@ object Parrot {
     }
   }
 
-  private fun initParamInternal(bundle: Bundle, any: Any, isClassParam: Boolean = false) {
+  private fun initParamInternal(
+    bundle: Bundle,
+    any: Any,
+    isClassParam: Boolean = false,
+    set: MutableMap<String, Boolean>? = null
+  ) {
     val fields = any.javaClass.declaredFields
-    val keySet = bundle.keySet()
+    val keySet = set ?: mutableMapOf()
+    if (!isClassParam) {
+      bundle.keySet().forEach {
+        keySet[it] = false
+      }
+    }
     fields?.forEach { field ->
-      val initialClassParam = getInitialClassParam(field)
-      if (initialClassParam != null && initialClassParam.constructor.isNotEmpty()) {
+      val mapParam = getInitialMapParam(field)
+      val initialClassParam = if (mapParam == null) getInitialClassParam(field) else null
+      if (mapParam != null) {
+        injectMapParam(field, bundle, any, mapParam)?.forEach { keySet[it] = true }
+      } else if (initialClassParam != null && initialClassParam.constructor.isNotEmpty()) {
         field.isAccessible = true
         val param = initClassParamConstructor(field, bundle, initialClassParam)
         param?.let {
           invokeObject(param, field, any)
           logD("data inject ${field.type} success  keys : ${initialClassParam.constructor}")
-          initialClassParam.constructor.forEach { keySet.remove(it) }
+          initialClassParam.constructor.forEach { keySet[it] = true }
         }
       } else if (initialClassParam != null) {
         field.isAccessible = true
         val param = field.get(any) ?: getParamInstance(field)
-        initParamInternal(bundle, param, true)
+        initParamInternal(bundle, param, true, keySet)
         field.set(any, param)
       } else {
         val paramName = getParamName(field)
@@ -78,16 +92,67 @@ object Parrot {
         if (key?.isNotEmpty() == true) {
           field.isAccessible = true
           if (invokeField(bundle.get(key), field, any)) {
-            keySet.remove(key)
+            keySet[key] = true
           }
         }
       }
     }
     if (!isClassParam) {
-      keySet?.forEach {
-        logE("key: $it not deal in ${any::class.java.name} data : ${bundle.get(it)}")
+      keySet.forEach {
+        if (!it.value) {
+          logE("key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(it.key)}")
+        }
       }
     }
+  }
+
+  private fun injectMapParam(
+    field: Field,
+    bundle: Bundle,
+    any: Any,
+    initialMapParam: InitialMapParam
+  ): Array<String>? {
+    if (initialMapParam.bundleKey.isEmpty()) return null
+    field.isAccessible = true
+    val dataList = mutableListOf<Any?>()
+    initialMapParam.bundleKey.forEach { key ->
+      dataList.add(bundle.get(key))
+    }
+    if (field.type.isArray) {
+      val array = arrayOf(*dataList.toTypedArray())
+      invokeObject(array, field, any)
+      return initialMapParam.bundleKey
+    }
+    when (field.type) {
+      List::class.java -> {
+        val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
+        list.addAll(dataList)
+        invokeObject(list, field, any)
+        return initialMapParam.bundleKey
+      }
+      Set::class.java -> {
+        val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
+        set.addAll(dataList)
+        invokeObject(set, field, any)
+        return initialMapParam.bundleKey
+      }
+      Map::class.java -> {
+        val map: MutableMap<String, Any?> =
+          field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
+        val length = initialMapParam.bundleKey.size
+        for (index in 0 until length) {
+          map[initialMapParam.mapKey.getOrElse(index) { initialMapParam.bundleKey[index] }] =
+            dataList[index]
+        }
+        invokeObject(map, field, any)
+        return initialMapParam.bundleKey
+      }
+    }
+    return null
+  }
+
+  private fun getInitialMapParam(field: Field): InitialMapParam? {
+    return field.getAnnotation(InitialMapParam::class.java)
   }
 
   private fun initClassParamConstructor(
@@ -261,14 +326,14 @@ data class ParamName(
   val fieldNames: MutableList<String>? = null
 ) {
 
-  fun belongToSet(keySet: Set<String>): String? {
+  fun belongToSet(keySet: Map<String, Boolean>): String? {
     key?.let {
-      if (keySet.contains(key)) {
+      if (keySet.containsKey(key)) {
         return key
       }
     }
     fieldNames?.forEach {
-      if (keySet.contains(it)) {
+      if (keySet.containsKey(it)) {
         return it
       }
     }
