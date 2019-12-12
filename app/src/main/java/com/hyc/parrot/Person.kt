@@ -1,6 +1,6 @@
 package com.hyc.parrot
 
-import com.hyc.parrot.init.InitialParam
+import com.hyc.parrot.init.InitParam
 
 /**
  * @author: 贺宇成
@@ -10,6 +10,6 @@ import com.hyc.parrot.init.InitialParam
 
 data class Person(
   val name : String,
-  @InitialParam("personId")
+  @InitParam("personId")
   val id : Long
 )

@@ -74,13 +74,13 @@ object Parrot {
       val initialClassParam = if (mapParam == null) getInitialClassParam(field) else null
       if (mapParam != null) {
         injectMapParam(field, bundle, any, mapParam)?.forEach { keySet[it] = true }
-      } else if (initialClassParam != null && initialClassParam.constructor.isNotEmpty()) {
+      } else if (initialClassParam != null && initialClassParam.value.isNotEmpty()) {
         field.isAccessible = true
         val param = initClassParamConstructor(field, bundle, initialClassParam)
         param?.let {
           invokeObject(param, field, any)
-          logD("data inject ${field.type} success  keys : ${initialClassParam.constructor}")
-          initialClassParam.constructor.forEach { keySet[it] = true }
+          logD("data inject ${field.type} success  keys : ${initialClassParam.value}")
+          initialClassParam.value.forEach { keySet[it] = true }
         }
       } else if (initialClassParam != null) {
         field.isAccessible = true
@@ -111,31 +111,31 @@ object Parrot {
     field: Field,
     bundle: Bundle,
     any: Any,
-    initialMapParam: InitialMapParam
-  ): Array<String>? {
-    if (initialMapParam.bundleKey.isEmpty()) return null
+    initialMapParam: InitDataStructure
+  ): Array<out String>? {
+    if (initialMapParam.value.isEmpty()) return null
     field.isAccessible = true
     val dataList = mutableListOf<Any?>()
-    initialMapParam.bundleKey.forEach { key ->
+    initialMapParam.value.forEach { key ->
       dataList.add(bundle.get(key))
     }
     if (field.type.isArray) {
       val array = arrayOf(*dataList.toTypedArray())
       invokeObject(array, field, any)
-      return initialMapParam.bundleKey
+      return initialMapParam.value
     }
     when (field.type) {
       List::class.java -> {
         val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
         list.addAll(dataList)
         invokeObject(list, field, any)
-        return initialMapParam.bundleKey
+        return initialMapParam.value
       }
       Set::class.java -> {
         val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
         set.addAll(dataList)
         invokeObject(set, field, any)
-        return initialMapParam.bundleKey
+        return initialMapParam.value
       }
       Map::class.java -> {
         val length = dataList.size
@@ -156,28 +156,28 @@ object Parrot {
         val map: MutableMap<String, Any?> =
           field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
         for (index in 0 until length) {
-          map[initialMapParam.mapKey.getOrElse(index) { initialMapParam.bundleKey[index] }] =
+          map[initialMapParam.mapKey.getOrElse(index) { initialMapParam.value[index] }] =
             dataList[index]
         }
         invokeObject(map, field, any)
-        return initialMapParam.bundleKey
+        return initialMapParam.value
       }
     }
     return null
   }
 
-  private fun getInitialMapParam(field: Field): InitialMapParam? {
-    return field.getAnnotation(InitialMapParam::class.java)
+  private fun getInitialMapParam(field: Field): InitDataStructure? {
+    return field.getAnnotation(InitDataStructure::class.java)
   }
 
   private fun initClassParamConstructor(
     field: Field,
     bundle: Bundle,
-    initialClassParam: InitialClassParam
+    initialClassParam: InitClassParam
   ): Any? {
     var constructor: Constructor<*>? = null
     field.type.declaredConstructors?.forEach {
-      if (it.parameterTypes?.size == initialClassParam.constructor.size) {
+      if (it.parameterTypes?.size == initialClassParam.value.size) {
         constructor = it
         return@forEach
       }
@@ -185,9 +185,9 @@ object Parrot {
     constructor ?: return null
     val parameterTypes = constructor?.parameterTypes
     val params = mutableListOf<Any?>()
-    val length = initialClassParam.constructor.size
+    val length = initialClassParam.value.size
     for (index in 0 until length) {
-      val data = bundle.get(initialClassParam.constructor[index])
+      val data = bundle.get(initialClassParam.value[index])
       val paramType = parameterTypes?.getOrNull(index)
       if (data != null && paramType != null) {
         when (getType(data)) {
@@ -259,8 +259,8 @@ object Parrot {
     return constructor.newInstance(*param.toTypedArray())
   }
 
-  private fun getInitialClassParam(field: Field): InitialClassParam? {
-    return field.getAnnotation(InitialClassParam::class.java)
+  private fun getInitialClassParam(field: Field): InitClassParam? {
+    return field.getAnnotation(InitClassParam::class.java)
   }
 
   private fun getType(any: Any): Class<*> {
@@ -289,6 +289,8 @@ object Parrot {
       )
     ) {
       logD("string to ${field.type} success  data: $data")
+    } else if (field.type == String::class.java) {
+      invokeObject(data.toString(), field, any)
     } else {
       return false
     }
@@ -323,14 +325,13 @@ object Parrot {
   }
 
   private fun getParamName(field: Field): ParamName {
-    val initialParam = field.getAnnotation(InitialParam::class.java)
+    val initialParam = field.getAnnotation(InitParam::class.java)
     initialParam ?: return ParamName(key = field.name)
     val fieldNames = mutableListOf<String>()
     fieldNames.add(field.name)
-    if (initialParam.key.isNotEmpty()) {
-      fieldNames.add(initialParam.key)
+    if (initialParam.value.isNotEmpty()) {
+      fieldNames.addAll(initialParam.value)
     }
-    fieldNames.addAll(initialParam.alternate)
     return ParamName(fieldNames = fieldNames)
   }
 

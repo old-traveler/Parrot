@@ -1,7 +1,7 @@
 package com.hyc.parrot
 
-import com.hyc.parrot.init.InitialClassParam
-import com.hyc.parrot.init.InitialParam
+import com.hyc.parrot.init.InitClassParam
+import com.hyc.parrot.init.InitParam
 
 /**
  * @author: 贺宇成
@@ -9,10 +9,10 @@ import com.hyc.parrot.init.InitialParam
  * @desc:
  */
 data class Student(
-  @InitialParam("class_name",alternate = ["className"])
+  @InitParam("class_name","className")
   val class_name : String?=null,
   val studentId : String?=null,
-  @InitialClassParam
+  @InitClassParam
   val teacher: Person?
 ){
   override fun toString(): String {

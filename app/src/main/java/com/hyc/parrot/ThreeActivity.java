@@ -2,8 +2,10 @@ package com.hyc.parrot;
 
 import android.os.Bundle;
 import android.util.Log;
-import com.hyc.parrot.init.InitialClassParam;
-import com.hyc.parrot.init.InitialParam;
+import com.hyc.parrot.init.InitClassParam;
+import com.hyc.parrot.init.InitParam;
+import java.io.IOException;
+import kotlin.jvm.Throws;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -13,24 +15,24 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ThreeActivity extends BaseActivity {
 
-  @InitialParam(key = "int")
+  @InitParam("int")
   private int i = 1;
-  @InitialParam(key = "long")
+  @InitParam("long")
   private long l =2;
-  @InitialParam(key = "double")
+  @InitParam("double")
   private double d=3;
-  @InitialParam(key = "float")
+  @InitParam("float")
   private float f = 8.0f;
-  @InitialParam(key = "string")
+  @InitParam("string")
   private String s = "str";
   private UserBean userBean;
   private int intString = 4;
   private long longString = 5;
   private double doubleString = 6;
   private float floatString = 7.0f;
-  @InitialParam(key = "jsonObject")
+  @InitParam("jsonObject")
   private UserBean user;
-  @InitialClassParam
+  @InitClassParam
   private Student student;
 
   @Override

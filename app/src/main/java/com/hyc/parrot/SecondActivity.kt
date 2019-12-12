@@ -4,8 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import com.google.gson.Gson
-import com.hyc.parrot.init.InitialClassParam
-import com.hyc.parrot.init.InitialParam
+import com.hyc.parrot.init.InitClassParam
+import com.hyc.parrot.init.InitParam
 
 /**
  * @author: 贺宇成
@@ -23,12 +23,12 @@ class SecondActivity : BaseActivity() {
   private var intString : Int = 1
   private var longString : Long = 2
   private var doubleString : Double = 3.0
-  @InitialParam
+  @InitParam
   private var floatString : Float = 4.0f
-  @InitialParam("jsonObject")
+  @InitParam("jsonObject")
   private var user : UserBean? = null
   private var beike : UserBean = UserBean("贝壳","123",1,177.0f)
-  @InitialClassParam
+  @InitClassParam
   private lateinit var student: Student
 
   override fun onCreate(savedInstanceState: Bundle?) {

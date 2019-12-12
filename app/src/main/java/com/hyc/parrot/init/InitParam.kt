@@ -13,11 +13,11 @@ import kotlin.annotation.AnnotationTarget.FIELD
 @kotlin.annotation.Target(
   FIELD
 )
-annotation class InitialParam(
-  //Bundle解析key,可不填写，默认变量名称
-  val key: String = "",
-  //支持多个alternate
-  val alternate: Array<String> = []
+annotation class InitParam(
+  /**
+   * Bundle解析参数key,可设置多个key
+   */
+  vararg val value: String = []
 )
 
 /**
@@ -28,16 +28,22 @@ annotation class InitialParam(
 @kotlin.annotation.Target(
   FIELD
 )
-annotation class InitialClassParam(
-  val constructor: Array<String> = []
+annotation class InitClassParam(
+  vararg val value: String = []
 )
 
 @kotlin.annotation.Retention(RUNTIME)
 @kotlin.annotation.Target(
   FIELD
 )
-annotation class InitialMapParam(
-  val bundleKey: Array<String> = [],
+annotation class InitDataStructure(
+  /**
+   * Bundle解析参数key
+   */
+  vararg val value: String = [],
+  /**
+   * map使用时可设置对应的mapKey
+   */
   val mapKey: Array<String> = []
 )
 
