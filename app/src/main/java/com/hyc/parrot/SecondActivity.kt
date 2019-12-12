@@ -8,13 +8,22 @@ import com.google.gson.Gson
 import com.hyc.parrot.init.InitClassParam
 import com.hyc.parrot.init.InitDataStructure
 import com.hyc.parrot.init.InitParam
+import com.hyc.parrot.init.InjectInterceptor
 
 /**
  * @author: 贺宇成
  * @date: 2019-12-08 17:29
  * @desc:
  */
-class SecondActivity : BaseActivity() {
+class SecondActivity : BaseActivity() ,InjectInterceptor{
+
+
+  override fun onInject(key: String, any: Any?): Boolean {
+    if (key == "floatString"){
+      return true
+    }
+    return false
+  }
 
   private var int: String = ""
   private var long: Long = 2

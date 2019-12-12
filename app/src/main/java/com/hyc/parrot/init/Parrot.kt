@@ -27,6 +27,10 @@ object Parrot {
   private const val tag = "Parrot"
   private val mGson = Gson()
   private val enableLog = BuildConfig.DEBUG
+  /**
+   * 是否允许用field的name作为bundleKey
+   */
+  private var enableNameKey = true
 
   @JvmStatic
   fun initParam(bundle: Bundle, any: Any) {
@@ -71,26 +75,31 @@ object Parrot {
       val dataStructure = getInitDataStructure(field)
       val initialClassParam = if (dataStructure == null) getInitialClassParam(field) else null
       if (dataStructure != null) {
+        //对数据结构类型的field进行数据注入
         if (injectDataStructure(field, bundle, any, dataStructure)) {
           keyMap.signDeal(*dataStructure.value)
         }
       } else if (initialClassParam != null && initialClassParam.value.isNotEmpty()) {
-        val param = initClassParamConstructor(field, bundle, initialClassParam)
+        //对此field进行构造方法数据注入
+        val param = initClassParamConstructor(field, bundle, initialClassParam, any)
         param?.let {
           invokeObject(param, field, any)
           keyMap.signDeal(*initialClassParam.value)
         }
       } else if (initialClassParam != null) {
+        //此field为一个类型参数，可将bundle数据注入到此对象中
         field.isAccessible = true
         val param = field.get(any) ?: getParamInstance(field)
         initParamInternal(bundle, param, keyMap)
         invokeObject(param, field, any)
       } else {
+        //针对单个Field进行检查，如果匹配到key，则进行注入
         val paramName = getParamName(field)
-        val key = paramName.belongToSet(keyMap)
-        if (key?.isNotEmpty() == true) {
+        val key = paramName?.belongToSet(keyMap)
+        val data = bundle.get(key)
+        if (key?.isNotEmpty() == true && !any.isIntercept(key, data)) {
           field.isAccessible = true
-          if (invokeField(bundle.get(key), field, any)) {
+          if (invokeField(data, field, any)) {
             keyMap.signDeal(key)
           }
         }
@@ -120,6 +129,21 @@ object Parrot {
     }
   }
 
+  /**
+   * 获取当前注入目标对象是否为拦截器类型，如果是拦截器类型并且拦截注入事件
+   * 则停止注入行为，跳过此key。{跳过的key也会被认为已处理，不打印错误信息}
+   */
+  private fun Any.isIntercept(key: String, any: Any?): Boolean {
+    if (this is InjectInterceptor) {
+      val isIntercept = this.onInject(key, any)
+      if (isIntercept) {
+        logD("key : $key has been Intercepted")
+      }
+      return isIntercept
+    }
+    return false
+  }
+
   private fun injectDataStructure(
     field: Field,
     bundle: Bundle,
@@ -130,7 +154,10 @@ object Parrot {
     field.isAccessible = true
     val dataList = mutableListOf<Any?>()
     initialMapParam.value.forEach { key ->
-      dataList.add(bundle.get(key))
+      val value = bundle.get(key)
+      if (!any.isIntercept(key, value)) {
+        dataList.add(value)
+      }
     }
     if (field.type.isArray) {
       return injectArray(dataList, field, any)
@@ -322,7 +349,8 @@ object Parrot {
   private fun initClassParamConstructor(
     field: Field,
     bundle: Bundle,
-    initialClassParam: InitClassParam
+    initialClassParam: InitClassParam,
+    any: Any
   ): Any? {
     field.isAccessible = true
     var constructor: Constructor<*>? = null
@@ -337,9 +365,10 @@ object Parrot {
     val params = mutableListOf<Any?>()
     val length = initialClassParam.value.size
     for (index in 0 until length) {
-      val data = bundle.get(initialClassParam.value[index])
+      val key = initialClassParam.value[index]
+      val data = bundle.get(key)
       val paramType = parameterTypes?.getOrNull(index)
-      if (data != null && paramType != null) {
+      if (data != null && paramType != null && !any.isIntercept(key, data)) {
         when (getType(data)) {
           paramType -> params.add(data)
           String::class.java -> params.add(getDataFromString(paramType, data as String))
@@ -413,6 +442,10 @@ object Parrot {
     return field.getAnnotation(InitClassParam::class.java)
   }
 
+  /**
+   * 通过is来判断此数据的类型
+   * 用来兼容Java和Kotlin的基本类型无法直接对比的问题
+   */
   private fun getType(any: Any): Class<*> {
     when (any) {
       is Int -> return Int::class.java
@@ -474,9 +507,9 @@ object Parrot {
     field.set(any, data)
   }
 
-  private fun getParamName(field: Field): ParamName {
+  private fun getParamName(field: Field): ParamName? {
     val initialParam = field.getAnnotation(InitParam::class.java)
-    initialParam ?: return ParamName(key = field.name)
+    initialParam ?: return if (enableNameKey) ParamName(key = field.name) else null
     val fieldNames = mutableListOf<String>()
     fieldNames.add(field.name)
     if (initialParam.value.isNotEmpty()) {
@@ -506,4 +539,13 @@ data class ParamName(
     return null
   }
 
+}
+
+interface InjectInterceptor {
+  /**
+   * 注入参数时的回调方法，在被注入的class中实现此接口
+   * 即可接收到注入事件回掉，可通过返回值拦截注入事件
+   * @return true 为拦截此注入事件 otherwise 继续注入
+   */
+  fun onInject(key: String, any: Any?): Boolean
 }
