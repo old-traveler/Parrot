@@ -3,7 +3,11 @@ package com.hyc.parrot;
 import android.os.Bundle;
 import android.util.Log;
 import com.hyc.parrot.init.InitClassParam;
+import com.hyc.parrot.init.InitDataStructure;
 import com.hyc.parrot.init.InitParam;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,12 +36,28 @@ public class ThreeActivity extends BaseActivity {
   private UserBean user;
   @InitClassParam
   private Student student;
+  @InitDataStructure({"str1","str2"})
+  public String[] strings;
+  @InitDataStructure({"int","long","double","longString","floatString"})
+  private Bundle bundle;
+  @InitDataStructure({"int","long","double","longString","floatString"})
+  private Map map;
+  @InitDataStructure({"int","long","double","longString","floatString"})
+  private Set set;
+  @InitDataStructure({"int","long","double","longString","floatString"})
+  private List list;
+  @InitDataStructure({"int","intString"})
+  private int[] intArray;
+  @InitDataStructure({"int","intString"})
+  private int[] intArray1;
+
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     printParam();
+
   }
 
   private void printParam(){
@@ -53,6 +73,15 @@ public class ThreeActivity extends BaseActivity {
     Log.d("ThreeActivity", String.valueOf(floatString));
     Log.d("ThreeActivity",user.toString());
     Log.d("ThreeActivity",student.toString());
+    for (String string : strings) {
+      Log.d("ThreeActivity","数组:"+string);
+    }
+    Log.d("ThreeActivity",""+map.size());
+    Log.d("ThreeActivity",""+bundle.keySet().size());
+    Log.d("ThreeActivity",""+set.size());
+    Log.d("ThreeActivity",""+list.size());
+    Log.d("ThreeActivity",""+intArray.length);
+    Log.d("ThreeActivity",""+intArray1.length);
   }
 
 }

@@ -13,12 +13,6 @@ open class BaseActivity : AppCompatActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    intent.extras?.let {
-      initBundle(it)
-    }
-  }
-
-  open fun initBundle(bundle: Bundle) {
-    Parrot.initParam(bundle, this)
+    Parrot.initParam(intent.extras ?: Bundle(),this)
   }
 }

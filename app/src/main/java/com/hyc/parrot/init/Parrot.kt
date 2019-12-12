@@ -1,12 +1,16 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.hyc.parrot.init
 
 import android.app.Activity
 import android.os.Bundle
+import android.os.Parcelable
 import android.support.v4.app.Fragment
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.hyc.parrot.BuildConfig
+import java.io.Serializable
 import java.lang.NumberFormatException
 import java.lang.RuntimeException
 import java.lang.reflect.Constructor
@@ -129,54 +133,186 @@ object Parrot {
       dataList.add(bundle.get(key))
     }
     if (field.type.isArray) {
-      injectList(dataList, field, any)
-      return true
+      return injectArray(dataList, field, any)
     }
     when (field.type) {
-      List::class.java -> {
-        val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
-        list.addAll(dataList)
-        invokeObject(list, field, any)
-        return true
-      }
-      Set::class.java -> {
-        val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
-        set.addAll(dataList)
-        invokeObject(set, field, any)
-        return true
-      }
-      Map::class.java -> {
-        val length = dataList.size
-        val valueType: Class<*>? =
-          (field.genericType as? ParameterizedType)?.actualTypeArguments?.getOrNull(1) as? Class<*>
-        if (valueType == String::class.java) {
-          for (index in 0 until length) {
-            dataList[index] = dataList.getOrNull(index)?.toString()
-          }
-        } else if (valueType != null && valueType != String::class.java) {
-          for (index in 0 until length) {
-            val value = dataList.getOrNull(index)
-            if (value != null && getType(value) == String::class.java) {
-              dataList[index] = getDataFromString(valueType, value as String)
-            }
-          }
-        }
-        val map: MutableMap<String, Any?> =
-          field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
-        for (index in 0 until length) {
-          map[initialMapParam.mapKey.getOrElse(index) { initialMapParam.value[index] }] =
-            dataList[index]
-        }
-        invokeObject(map, field, any)
-        return true
-      }
+      List::class.java -> return injectList(dataList, field, any)
+      Set::class.java -> return injectSet(dataList, field, any)
+      Map::class.java -> return injectMap(dataList, field, any, initialMapParam)
+      Bundle::class.java -> return injectBundle(dataList, field, any, initialMapParam)
     }
     return false
   }
 
-  private fun injectList(dataList: MutableList<Any?>, field: Field, any: Any) {
-    val array = arrayOf(*dataList.toTypedArray())
-    invokeObject(array, field, any)
+  private fun Field.getActualType(): Class<*>? {
+    return (this.genericType as? ParameterizedType)?.actualTypeArguments
+      ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*>
+  }
+
+  private fun MutableList<Any?>.typeConversion(clazz: Class<*>) {
+    val resList = map {
+      it?.let {
+        when {
+          clazz == String::class.java -> it.toString()
+          getType(it) == String::class.java -> getDataFromString(clazz, it as String)
+          else -> it
+        }
+      }
+    }
+    this.clear()
+    this.addAll(resList)
+  }
+
+  private fun MutableList<Any?>.toArray(clazz: Class<*>): Any? {
+    val length = this.size
+    when (clazz) {
+      String::class.java -> return (this as? MutableList<String?>)?.toTypedArray()
+      Int::class.java -> {
+        val array = (this as? MutableList<Int?>)?.toTypedArray()
+        return IntArray(length) { i -> array?.get(i) ?: 0 }
+      }
+      Integer::class.java -> return (this as? MutableList<Int?>)?.toTypedArray()
+      java.lang.Double::class.java -> return (this as? MutableList<Double?>)?.toTypedArray()
+      Double::class.java -> {
+        val array = (this as? MutableList<Double?>)?.toTypedArray()
+        return DoubleArray(length) { i -> array?.get(i) ?: 0.0 }
+      }
+      java.lang.Float::class.java -> return (this as? MutableList<Float?>)?.toTypedArray()
+      Float::class.java -> {
+        val array = (this as? MutableList<Float?>)?.toTypedArray()
+        return FloatArray(length) { i -> array?.get(i) ?: 0.0f }
+      }
+      java.lang.Byte::class.java -> return (this as? MutableList<Byte?>)?.toTypedArray()
+      Byte::class.java -> {
+        val array = (this as? MutableList<Byte?>)?.toTypedArray()
+        return ByteArray(length) { i -> array?.get(i) ?: 0 }
+      }
+      java.lang.Long::class.java -> return (this as? MutableList<Long?>)?.toTypedArray()
+      Long::class.java -> {
+        val array = (this as? MutableList<Long?>)?.toTypedArray()
+        return LongArray(length) { i -> array?.get(i) ?: 0 }
+      }
+      java.lang.Character::class.java -> return (this as? MutableList<Char?>)?.toTypedArray()
+      Char::class.java -> {
+        val array = (this as? MutableList<Char?>)?.toTypedArray()
+        return CharArray(length) { i -> array?.get(i) ?: ' ' }
+      }
+      java.lang.Boolean::class.java -> return (this as? MutableList<Boolean?>)?.toTypedArray()
+      Boolean::class.java -> {
+        val array = (this as? MutableList<Boolean?>)?.toTypedArray()
+        return BooleanArray(length) { i -> array?.get(i) ?: false }
+      }
+      java.lang.Short::class.java -> return (this as? MutableList<Short?>)?.toTypedArray()
+      Short::class.java -> {
+        val array = (this as? MutableList<Short?>)?.toTypedArray()
+        return ShortArray(length) { i -> array?.get(i) ?: 0 }
+      }
+      Parcelable::class.java -> return (this as? MutableList<Parcelable?>)?.toTypedArray()
+      Serializable::class.java -> return (this as? MutableList<Serializable?>)?.toTypedArray()
+    }
+    return null
+  }
+
+  private fun injectArray(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
+    dataList.typeConversion(field.type.componentType)
+    dataList.toArray(field.type.componentType)?.let {
+      invokeObject(it, field, any)
+      return true
+    }
+    return false
+  }
+
+  private fun injectList(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
+    field.getActualType()?.let { dataList.typeConversion(it) }
+    val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
+    list.addAll(dataList)
+    invokeObject(list, field, any)
+    return true
+  }
+
+  private fun injectSet(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
+    field.getActualType()?.let { dataList.typeConversion(it) }
+    val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
+    set.addAll(dataList)
+    invokeObject(set, field, any)
+    return true
+  }
+
+  private fun injectMap(
+    dataList: MutableList<Any?>,
+    field: Field,
+    any: Any,
+    initDataStructure: InitDataStructure
+  ): Boolean {
+    val length = dataList.size
+    field.getActualType()?.let {
+      dataList.typeConversion(it)
+    }
+    val map: MutableMap<String, Any?> =
+      field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
+    for (index in 0 until length) {
+      map[initDataStructure.mapKey.getOrElse(index) { initDataStructure.value[index] }] =
+        dataList[index]
+    }
+    invokeObject(map, field, any)
+    return true
+  }
+
+  private fun injectBundle(
+    dataList: MutableList<Any?>,
+    field: Field,
+    any: Any,
+    initDataStructure: InitDataStructure
+  ): Boolean {
+    val bundle = field.get(any) as? Bundle ?: Bundle()
+    var index = 0
+    dataList.forEach {
+      val key = initDataStructure.mapKey.getOrElse(index) { initDataStructure.value[index] }
+      when (it) {
+        is Int -> bundle.putInt(key, it)
+        is Float -> bundle.putFloat(key, it)
+        is Byte -> bundle.putByte(key, it)
+        is Double -> bundle.putDouble(key, it)
+        is Long -> bundle.putLong(key, it)
+        is Char -> bundle.putChar(key, it)
+        is Boolean -> bundle.putBoolean(key, it)
+        is Short -> bundle.putShort(key, it)
+        is String -> bundle.putString(key, it)
+        is Parcelable -> bundle.putParcelable(key, it)
+        is Serializable -> bundle.putSerializable(key, it)
+        is Bundle -> bundle.putBundle(key, it)
+        is IntArray -> bundle.putIntArray(key, it)
+        is FloatArray -> bundle.putFloatArray(key, it)
+        is ByteArray -> bundle.putByteArray(key, it)
+        is DoubleArray -> bundle.putDoubleArray(key, it)
+        is LongArray -> bundle.putLongArray(key, it)
+        is CharArray -> bundle.putCharArray(key, it)
+        is BooleanArray -> bundle.putBooleanArray(key, it)
+        is ShortArray -> bundle.putShortArray(key, it)
+        is Array<*> -> bundle.putStringArrays(key, it)
+        is ArrayList<*> -> bundle.putArrayList(key, it)
+      }
+      index++
+    }
+    invokeObject(bundle, field, any)
+    return true
+  }
+
+  private fun Bundle.putStringArrays(key: String, array: Array<*>) {
+    if (array::class.java.componentType == String::class.java) {
+      putStringArray(key, array as? Array<String>?)
+    } else if (array::class.java.componentType == Parcelable::class.java) {
+      putParcelableArray(key, array as? Array<Parcelable>?)
+    }
+  }
+
+  private fun Bundle.putArrayList(key: String, array: ArrayList<*>) {
+    when (array.getOrNull(0)) {
+      is String -> putStringArrayList(key, array as? ArrayList<String>?)
+      is Int -> putIntegerArrayList(key, array as? ArrayList<Int>)
+      is Parcelable -> putParcelableArrayList(key, array as? ArrayList<Parcelable>)
+      is CharSequence -> putCharSequenceArrayList(key, array as? ArrayList<CharSequence>)
+    }
   }
 
   private fun getInitDataStructure(field: Field): InitDataStructure? {
