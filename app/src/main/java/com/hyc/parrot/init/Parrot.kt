@@ -74,33 +74,36 @@ object Parrot {
     fields?.forEach { field ->
       val dataStructure = getInitDataStructure(field)
       val initialClassParam = if (dataStructure == null) getInitialClassParam(field) else null
-      if (dataStructure != null) {
-        //对数据结构类型的field进行数据注入
-        if (injectDataStructure(field, bundle, any, dataStructure)) {
-          keyMap.signDeal(*dataStructure.value)
+      when {
+        dataStructure != null -> //对数据结构类型的field进行数据注入
+          if (injectDataStructure(field, bundle, any, dataStructure)) {
+            keyMap.signDeal(*dataStructure.value)
+          }
+        initialClassParam != null && initialClassParam.value.isNotEmpty() -> {
+          //对此field进行构造方法数据注入
+          val param = initClassParamConstructor(field, bundle, initialClassParam, any)
+          param?.let {
+            invokeObject(param, field, any)
+            keyMap.signDeal(*initialClassParam.value)
+          }
         }
-      } else if (initialClassParam != null && initialClassParam.value.isNotEmpty()) {
-        //对此field进行构造方法数据注入
-        val param = initClassParamConstructor(field, bundle, initialClassParam, any)
-        param?.let {
-          invokeObject(param, field, any)
-          keyMap.signDeal(*initialClassParam.value)
-        }
-      } else if (initialClassParam != null) {
-        //此field为一个类型参数，可将bundle数据注入到此对象中
-        field.isAccessible = true
-        val param = field.get(any) ?: getParamInstance(field)
-        initParamInternal(bundle, param, keyMap)
-        invokeObject(param, field, any)
-      } else {
-        //针对单个Field进行检查，如果匹配到key，则进行注入
-        val paramName = getParamName(field)
-        val key = paramName?.belongToSet(keyMap)
-        val data = bundle.get(key)
-        if (key?.isNotEmpty() == true && !any.isIntercept(key, data)) {
+        initialClassParam != null -> {
+          //此field为一个类型参数，可将bundle数据注入到此对象中
           field.isAccessible = true
-          if (invokeField(data, field, any)) {
-            keyMap.signDeal(key)
+          val param = field.get(any) ?: getParamInstance(field)
+          initParamInternal(bundle, param, keyMap)
+          invokeObject(param, field, any)
+        }
+        else -> {
+          //针对单个Field进行检查，如果匹配到key，则进行注入
+          val paramName = getParamName(field)
+          val key = paramName?.belongToSet(keyMap)
+          val data = bundle.get(key)
+          if (key?.isNotEmpty() == true && !any.isIntercept(key, data)) {
+            field.isAccessible = true
+            if (invokeField(data, field, any)) {
+              keyMap.signDeal(key)
+            }
           }
         }
       }
