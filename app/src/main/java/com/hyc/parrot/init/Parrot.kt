@@ -59,83 +59,91 @@ object Parrot {
   private fun initParamInternal(
     bundle: Bundle,
     any: Any,
-    isClassParam: Boolean = false,
-    set: MutableMap<String, Boolean>? = null
+    recursiveSet: MutableMap<String, Boolean>? = null
   ) {
     val fields = any.javaClass.declaredFields
-    val keySet = set ?: mutableMapOf()
-    if (!isClassParam) {
-      bundle.keySet().forEach {
-        keySet[it] = false
-      }
-    }
+    val keyMap = recursiveSet ?: bundle.toKeyMap()
     fields?.forEach { field ->
-      val mapParam = getInitialMapParam(field)
-      val initialClassParam = if (mapParam == null) getInitialClassParam(field) else null
-      if (mapParam != null) {
-        injectMapParam(field, bundle, any, mapParam)?.forEach { keySet[it] = true }
+      val dataStructure = getInitDataStructure(field)
+      val initialClassParam = if (dataStructure == null) getInitialClassParam(field) else null
+      if (dataStructure != null) {
+        if (injectDataStructure(field, bundle, any, dataStructure)) {
+          keyMap.signDeal(*dataStructure.value)
+        }
       } else if (initialClassParam != null && initialClassParam.value.isNotEmpty()) {
-        field.isAccessible = true
         val param = initClassParamConstructor(field, bundle, initialClassParam)
         param?.let {
           invokeObject(param, field, any)
-          logD("data inject ${field.type} success  keys : ${initialClassParam.value}")
-          initialClassParam.value.forEach { keySet[it] = true }
+          keyMap.signDeal(*initialClassParam.value)
         }
       } else if (initialClassParam != null) {
         field.isAccessible = true
         val param = field.get(any) ?: getParamInstance(field)
-        initParamInternal(bundle, param, true, keySet)
-        field.set(any, param)
+        initParamInternal(bundle, param, keyMap)
+        invokeObject(param, field, any)
       } else {
         val paramName = getParamName(field)
-        val key = paramName.belongToSet(keySet)
+        val key = paramName.belongToSet(keyMap)
         if (key?.isNotEmpty() == true) {
           field.isAccessible = true
           if (invokeField(bundle.get(key), field, any)) {
-            keySet[key] = true
+            keyMap.signDeal(key)
           }
         }
       }
     }
-    if (!isClassParam) {
-      keySet.forEach {
-        if (!it.value) {
-          logE("key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(it.key)}")
-        }
+
+    //打印未处理的key
+    recursiveSet ?: keyMap.forEach {
+      if (!it.value) {
+        logE("key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(it.key)}")
       }
     }
   }
 
-  private fun injectMapParam(
+  private fun Bundle.toKeyMap(): MutableMap<String, Boolean> {
+    val keyMap = mutableMapOf<String, Boolean>()
+    this.keySet().forEach {
+      keyMap[it] = false
+    }
+    return keyMap
+  }
+
+  private fun MutableMap<String, Boolean>.signDeal(vararg keys: String) {
+    keys.forEach {
+      logD("key : \"$it\"  has been processed")
+      this[it] = true
+    }
+  }
+
+  private fun injectDataStructure(
     field: Field,
     bundle: Bundle,
     any: Any,
     initialMapParam: InitDataStructure
-  ): Array<out String>? {
-    if (initialMapParam.value.isEmpty()) return null
+  ): Boolean {
+    if (initialMapParam.value.isEmpty()) return false
     field.isAccessible = true
     val dataList = mutableListOf<Any?>()
     initialMapParam.value.forEach { key ->
       dataList.add(bundle.get(key))
     }
     if (field.type.isArray) {
-      val array = arrayOf(*dataList.toTypedArray())
-      invokeObject(array, field, any)
-      return initialMapParam.value
+      injectList(dataList, field, any)
+      return true
     }
     when (field.type) {
       List::class.java -> {
         val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
         list.addAll(dataList)
         invokeObject(list, field, any)
-        return initialMapParam.value
+        return true
       }
       Set::class.java -> {
         val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
         set.addAll(dataList)
         invokeObject(set, field, any)
-        return initialMapParam.value
+        return true
       }
       Map::class.java -> {
         val length = dataList.size
@@ -160,13 +168,18 @@ object Parrot {
             dataList[index]
         }
         invokeObject(map, field, any)
-        return initialMapParam.value
+        return true
       }
     }
-    return null
+    return false
   }
 
-  private fun getInitialMapParam(field: Field): InitDataStructure? {
+  private fun injectList(dataList: MutableList<Any?>, field: Field, any: Any) {
+    val array = arrayOf(*dataList.toTypedArray())
+    invokeObject(array, field, any)
+  }
+
+  private fun getInitDataStructure(field: Field): InitDataStructure? {
     return field.getAnnotation(InitDataStructure::class.java)
   }
 
@@ -175,6 +188,7 @@ object Parrot {
     bundle: Bundle,
     initialClassParam: InitClassParam
   ): Any? {
+    field.isAccessible = true
     var constructor: Constructor<*>? = null
     field.type.declaredConstructors?.forEach {
       if (it.parameterTypes?.size == initialClassParam.value.size) {

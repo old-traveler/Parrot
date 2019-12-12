@@ -4,8 +4,6 @@ import android.os.Bundle;
 import android.util.Log;
 import com.hyc.parrot.init.InitClassParam;
 import com.hyc.parrot.init.InitParam;
-import java.io.IOException;
-import kotlin.jvm.Throws;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -56,8 +54,5 @@ public class ThreeActivity extends BaseActivity {
     Log.d("ThreeActivity",user.toString());
     Log.d("ThreeActivity",student.toString());
   }
-
-
-
 
 }
