@@ -1,7 +1,7 @@
 package com.hyc.parrot
 
 import com.google.gson.Gson
-import com.hyc.parrot.init.JsonConvert
+import com.hyc.parrot_lib.JsonConvert
 
 /**
  * @author: 贺宇成

@@ -1,7 +1,7 @@
 package com.hyc.parrot
 
-import com.hyc.parrot.init.InitClassParam
-import com.hyc.parrot.init.InitParam
+import com.hyc.parrot_lib.InitClassParam
+import com.hyc.parrot_lib.InitParam
 
 /**
  * @author: 贺宇成

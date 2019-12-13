@@ -1,4 +1,4 @@
-package com.hyc.parrot.init
+package com.hyc.parrot_lib
 
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.annotation.AnnotationTarget.FIELD

@@ -1,12 +1,11 @@
 @file:Suppress("UNCHECKED_CAST")
 
-package com.hyc.parrot.init
+package com.hyc.parrot_lib
 
 import android.os.Bundle
 import android.os.Parcelable
-import com.google.gson.JsonSyntaxException
-import com.hyc.parrot.init.Parrot.logD
-import com.hyc.parrot.init.Parrot.logE
+import com.hyc.parrot_lib.Parrot.logD
+import com.hyc.parrot_lib.Parrot.logE
 import java.io.Serializable
 
 /**
@@ -31,9 +30,15 @@ object DataConvert {
     return when {
       clazz == Any::class.java -> originalData
       getType(originalData) == clazz -> originalData
-      originalData::class.java == String::class.java -> stringToData(clazz, originalData as String)
+      originalData::class.java == String::class.java -> stringToData(
+        clazz,
+        originalData as String
+      )
       clazz == String::class.java -> originalData.toString()
-      originalData is Number -> return numberDataConvert(clazz, originalData)
+      originalData is Number -> return numberDataConvert(
+        clazz,
+        originalData
+      )
       else -> null
     }
   }
@@ -113,7 +118,10 @@ object DataConvert {
             null
           }
         }
-        else -> return if (needJsonConvert) getJsonObject(string, clazz) else null
+        else -> return if (needJsonConvert) getJsonObject(
+          string,
+          clazz
+        ) else null
       }
     } catch (e: NumberFormatException) {
       e.printStackTrace()
@@ -131,7 +139,7 @@ object DataConvert {
     var filedObject: Any? = null
     try {
       filedObject = jsonConvert?.fromJson(data, type)
-    } catch (e: JsonSyntaxException) {
+    } catch (e: Exception) {
       e.printStackTrace()
       logE("parse $type catch JsonSyntaxException json :$data")
     }
@@ -272,7 +280,7 @@ object DataConvert {
 
 interface JsonConvert {
 
-  @Throws(JsonSyntaxException::class)
+  @Throws(Exception::class)
   fun <T> fromJson(json: String, classOfT: Class<T>): T?
 
   fun toJson(src: Any): String?

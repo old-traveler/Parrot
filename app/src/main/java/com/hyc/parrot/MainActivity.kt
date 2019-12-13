@@ -4,8 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import com.google.gson.Gson
-import com.hyc.parrot.init.DataConvert
-import com.hyc.parrot.init.InitParam
+import com.hyc.parrot_lib.DataConvert
+import com.hyc.parrot_lib.InitParam
 
 class MainActivity : BaseActivity() {
 

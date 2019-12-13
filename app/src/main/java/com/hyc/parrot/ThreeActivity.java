@@ -2,9 +2,9 @@ package com.hyc.parrot;
 
 import android.os.Bundle;
 import android.util.Log;
-import com.hyc.parrot.init.InitClassParam;
-import com.hyc.parrot.init.InitDataStructure;
-import com.hyc.parrot.init.InitParam;
+import com.hyc.parrot_lib.InitClassParam;
+import com.hyc.parrot_lib.InitDataStructure;
+import com.hyc.parrot_lib.InitParam;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

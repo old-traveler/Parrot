@@ -2,7 +2,7 @@ package com.hyc.parrot
 
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import com.hyc.parrot.init.Parrot
+import com.hyc.parrot_lib.Parrot
 
 /**
  * @author: 贺宇成

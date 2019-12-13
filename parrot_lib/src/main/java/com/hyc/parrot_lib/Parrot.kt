@@ -1,12 +1,11 @@
 @file:Suppress("UNCHECKED_CAST")
 
-package com.hyc.parrot.init
+package com.hyc.parrot_lib
 
 import android.app.Activity
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.util.Log
-import com.hyc.parrot.BuildConfig
 import java.lang.RuntimeException
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -67,7 +66,9 @@ object Parrot {
     val keyMap = recursiveSet ?: bundle.toKeyMap()
     fields?.forEach { field ->
       val dataStructure = getInitDataStructure(field)
-      val initialClassParam = if (dataStructure == null) getInitialClassParam(field) else null
+      val initialClassParam = if (dataStructure == null) getInitialClassParam(
+        field
+      ) else null
       when {
         dataStructure != null -> //对数据结构类型的field进行数据注入
           if (injectDataStructure(field, bundle, any, dataStructure)) {
@@ -75,7 +76,12 @@ object Parrot {
           }
         initialClassParam != null && initialClassParam.value.isNotEmpty() -> {
           //对此field进行构造方法数据注入
-          val param = initClassParamConstructor(field, bundle, initialClassParam, any)
+          val param = initClassParamConstructor(
+            field,
+            bundle,
+            initialClassParam,
+            any
+          )
           param?.let {
             invokeObject(param, field, any)
             keyMap.signDeal(*initialClassParam.value)
@@ -109,7 +115,11 @@ object Parrot {
     //打印未处理的key
     recursiveSet ?: keyMap.forEach {
       if (!it.value) {
-        logE("key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(it.key)}")
+        logE(
+          "key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(
+            it.key
+          )}"
+        )
       }
     }
   }
@@ -159,8 +169,18 @@ object Parrot {
     when (field.type) {
       List::class.java -> return injectList(dataList, field, any)
       Set::class.java -> return injectSet(dataList, field, any)
-      Map::class.java -> return injectMap(dataList, field, any, initialMapParam)
-      Bundle::class.java -> return injectBundle(dataList, field, any, initialMapParam)
+      Map::class.java -> return injectMap(
+        dataList,
+        field,
+        any,
+        initialMapParam
+      )
+      Bundle::class.java -> return injectBundle(
+        dataList,
+        field,
+        any,
+        initialMapParam
+      )
     }
     return false
   }
@@ -182,7 +202,10 @@ object Parrot {
     val resList = mutableListOf<Any?>()
     initialMapParam.value.forEach {
       val data = bundle.get(it)
-      val convertData = if (isBundle) data else DataConvert.getConvertData(clazz, data)
+      val convertData = if (isBundle) data else DataConvert.getConvertData(
+        clazz,
+        data
+      )
       if (!any.isIntercept(it, data, convertData)) {
         resList.add(convertData)
       }
@@ -310,7 +333,9 @@ object Parrot {
 
   private fun getParamName(field: Field): ParamName? {
     val initialParam = field.getAnnotation(InitParam::class.java)
-    initialParam ?: return if (enableNameKey) ParamName(key = field.name) else null
+    initialParam ?: return if (enableNameKey) ParamName(
+      key = field.name
+    ) else null
     val fieldNames = mutableListOf<String>()
     fieldNames.add(field.name)
     if (initialParam.value.isNotEmpty()) {
