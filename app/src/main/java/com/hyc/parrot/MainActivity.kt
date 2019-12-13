@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import com.google.gson.Gson
+import com.hyc.parrot.init.DataConvert
 import com.hyc.parrot.init.InitParam
 
 class MainActivity : BaseActivity() {
@@ -22,6 +23,7 @@ class MainActivity : BaseActivity() {
   private var jsonObject: String = ""
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    DataConvert.jsonConvert = MyJsonConvert()
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     printParam()

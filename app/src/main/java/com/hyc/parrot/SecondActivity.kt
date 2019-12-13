@@ -16,14 +16,13 @@ import com.hyc.parrot.init.InjectInterceptor
  * @desc:
  */
 class SecondActivity : BaseActivity() ,InjectInterceptor{
-
-
-  override fun onInject(key: String, any: Any?): Boolean {
+  override fun onInject(key: String, original: Any?, convertData: Any?): Boolean {
     if (key == "floatString"){
       return true
     }
     return false
   }
+
 
   private var int: String = ""
   private var long: Long = 2

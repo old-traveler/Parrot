@@ -4,14 +4,9 @@ package com.hyc.parrot.init
 
 import android.app.Activity
 import android.os.Bundle
-import android.os.Parcelable
 import android.support.v4.app.Fragment
 import android.util.Log
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.hyc.parrot.BuildConfig
-import java.io.Serializable
-import java.lang.NumberFormatException
 import java.lang.RuntimeException
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -25,7 +20,6 @@ import java.lang.reflect.ParameterizedType
 object Parrot {
 
   private const val tag = "Parrot"
-  private val mGson = Gson()
   private val enableLog = BuildConfig.DEBUG
   /**
    * 是否允许用field的name作为bundleKey
@@ -39,13 +33,13 @@ object Parrot {
     logD("initParam cost ${System.currentTimeMillis() - startTime}")
   }
 
-  private fun logD(msg: String?) {
+  fun logD(msg: String?) {
     if (enableLog) {
       Log.d(tag, msg)
     }
   }
 
-  private fun logE(msg: String?) {
+  fun logE(msg: String?) {
     if (enableLog) {
       Log.e(tag, msg)
     }
@@ -99,10 +93,13 @@ object Parrot {
           val paramName = getParamName(field)
           val key = paramName?.belongToSet(keyMap)
           val data = bundle.get(key)
-          if (key?.isNotEmpty() == true && !any.isIntercept(key, data)) {
+          if (key?.isNotEmpty() == true) {
             field.isAccessible = true
-            if (invokeField(data, field, any)) {
-              keyMap.signDeal(key)
+            DataConvert.getConvertData(field.type, data)?.let {
+              if (!any.isIntercept(key, data, it)) {
+                invokeObject(it, field, any)
+                keyMap.signDeal(key)
+              }
             }
           }
         }
@@ -136,9 +133,9 @@ object Parrot {
    * 获取当前注入目标对象是否为拦截器类型，如果是拦截器类型并且拦截注入事件
    * 则停止注入行为，跳过此key。{跳过的key也会被认为已处理，不打印错误信息}
    */
-  private fun Any.isIntercept(key: String, any: Any?): Boolean {
+  private fun Any.isIntercept(key: String, original: Any?, any: Any?): Boolean {
     if (this is InjectInterceptor) {
-      val isIntercept = this.onInject(key, any)
+      val isIntercept = this.onInject(key, original, any)
       if (isIntercept) {
         logD("key : $key has been Intercepted")
       }
@@ -155,13 +152,7 @@ object Parrot {
   ): Boolean {
     if (initialMapParam.value.isEmpty()) return false
     field.isAccessible = true
-    val dataList = mutableListOf<Any?>()
-    initialMapParam.value.forEach { key ->
-      val value = bundle.get(key)
-      if (!any.isIntercept(key, value)) {
-        dataList.add(value)
-      }
-    }
+    val dataList = getDataList(field, any, initialMapParam, bundle)
     if (field.type.isArray) {
       return injectArray(dataList, field, any)
     }
@@ -174,78 +165,33 @@ object Parrot {
     return false
   }
 
-  private fun Field.getActualType(): Class<*>? {
+  private fun Field.getActualType(): Class<*> {
+    this.type.componentType?.let { return it }
     return (this.genericType as? ParameterizedType)?.actualTypeArguments
-      ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*>
+      ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*> ?: Any::class.java
   }
 
-  private fun MutableList<Any?>.typeConversion(clazz: Class<*>) {
-    val resList = map {
-      it?.let {
-        when {
-          clazz == String::class.java -> it.toString()
-          getType(it) == String::class.java -> getDataFromString(clazz, it as String)
-          else -> it
-        }
+  private fun getDataList(
+    field: Field,
+    any: Any,
+    initialMapParam: InitDataStructure,
+    bundle: Bundle
+  ): MutableList<Any?> {
+    val clazz = field.getActualType()
+    val isBundle = field.type == Bundle::class.java
+    val resList = mutableListOf<Any?>()
+    initialMapParam.value.forEach {
+      val data = bundle.get(it)
+      val convertData = if (isBundle) data else DataConvert.getConvertData(clazz, data)
+      if (!any.isIntercept(it, data, convertData)) {
+        resList.add(convertData)
       }
     }
-    this.clear()
-    this.addAll(resList)
-  }
-
-  private fun MutableList<Any?>.toArray(clazz: Class<*>): Any? {
-    val length = this.size
-    when (clazz) {
-      String::class.java -> return (this as? MutableList<String?>)?.toTypedArray()
-      Int::class.java -> {
-        val array = (this as? MutableList<Int?>)?.toTypedArray()
-        return IntArray(length) { i -> array?.get(i) ?: 0 }
-      }
-      Integer::class.java -> return (this as? MutableList<Int?>)?.toTypedArray()
-      java.lang.Double::class.java -> return (this as? MutableList<Double?>)?.toTypedArray()
-      Double::class.java -> {
-        val array = (this as? MutableList<Double?>)?.toTypedArray()
-        return DoubleArray(length) { i -> array?.get(i) ?: 0.0 }
-      }
-      java.lang.Float::class.java -> return (this as? MutableList<Float?>)?.toTypedArray()
-      Float::class.java -> {
-        val array = (this as? MutableList<Float?>)?.toTypedArray()
-        return FloatArray(length) { i -> array?.get(i) ?: 0.0f }
-      }
-      java.lang.Byte::class.java -> return (this as? MutableList<Byte?>)?.toTypedArray()
-      Byte::class.java -> {
-        val array = (this as? MutableList<Byte?>)?.toTypedArray()
-        return ByteArray(length) { i -> array?.get(i) ?: 0 }
-      }
-      java.lang.Long::class.java -> return (this as? MutableList<Long?>)?.toTypedArray()
-      Long::class.java -> {
-        val array = (this as? MutableList<Long?>)?.toTypedArray()
-        return LongArray(length) { i -> array?.get(i) ?: 0 }
-      }
-      java.lang.Character::class.java -> return (this as? MutableList<Char?>)?.toTypedArray()
-      Char::class.java -> {
-        val array = (this as? MutableList<Char?>)?.toTypedArray()
-        return CharArray(length) { i -> array?.get(i) ?: ' ' }
-      }
-      java.lang.Boolean::class.java -> return (this as? MutableList<Boolean?>)?.toTypedArray()
-      Boolean::class.java -> {
-        val array = (this as? MutableList<Boolean?>)?.toTypedArray()
-        return BooleanArray(length) { i -> array?.get(i) ?: false }
-      }
-      java.lang.Short::class.java -> return (this as? MutableList<Short?>)?.toTypedArray()
-      Short::class.java -> {
-        val array = (this as? MutableList<Short?>)?.toTypedArray()
-        return ShortArray(length) { i -> array?.get(i) ?: 0 }
-      }
-      Parcelable::class.java -> return (this as? MutableList<Parcelable?>)?.toTypedArray()
-      Serializable::class.java -> return (this as? MutableList<Serializable?>)?.toTypedArray()
-    }
-    return null
+    return resList
   }
 
   private fun injectArray(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
-    dataList.typeConversion(field.type.componentType)
-    dataList.toArray(field.type.componentType)?.let {
+    DataConvert.toArray(dataList, field.type.componentType)?.let {
       invokeObject(it, field, any)
       return true
     }
@@ -253,7 +199,6 @@ object Parrot {
   }
 
   private fun injectList(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
-    field.getActualType()?.let { dataList.typeConversion(it) }
     val list: MutableList<Any?> = field.get(any) as? MutableList<Any?> ?: mutableListOf()
     list.addAll(dataList)
     invokeObject(list, field, any)
@@ -261,7 +206,6 @@ object Parrot {
   }
 
   private fun injectSet(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
-    field.getActualType()?.let { dataList.typeConversion(it) }
     val set: MutableSet<Any?> = field.get(any) as? MutableSet<Any?> ?: mutableSetOf()
     set.addAll(dataList)
     invokeObject(set, field, any)
@@ -275,9 +219,6 @@ object Parrot {
     initDataStructure: InitDataStructure
   ): Boolean {
     val length = dataList.size
-    field.getActualType()?.let {
-      dataList.typeConversion(it)
-    }
     val map: MutableMap<String, Any?> =
       field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
     for (index in 0 until length) {
@@ -298,51 +239,11 @@ object Parrot {
     var index = 0
     dataList.forEach {
       val key = initDataStructure.mapKey.getOrElse(index) { initDataStructure.value[index] }
-      when (it) {
-        is Int -> bundle.putInt(key, it)
-        is Float -> bundle.putFloat(key, it)
-        is Byte -> bundle.putByte(key, it)
-        is Double -> bundle.putDouble(key, it)
-        is Long -> bundle.putLong(key, it)
-        is Char -> bundle.putChar(key, it)
-        is Boolean -> bundle.putBoolean(key, it)
-        is Short -> bundle.putShort(key, it)
-        is String -> bundle.putString(key, it)
-        is Parcelable -> bundle.putParcelable(key, it)
-        is Serializable -> bundle.putSerializable(key, it)
-        is Bundle -> bundle.putBundle(key, it)
-        is IntArray -> bundle.putIntArray(key, it)
-        is FloatArray -> bundle.putFloatArray(key, it)
-        is ByteArray -> bundle.putByteArray(key, it)
-        is DoubleArray -> bundle.putDoubleArray(key, it)
-        is LongArray -> bundle.putLongArray(key, it)
-        is CharArray -> bundle.putCharArray(key, it)
-        is BooleanArray -> bundle.putBooleanArray(key, it)
-        is ShortArray -> bundle.putShortArray(key, it)
-        is Array<*> -> bundle.putStringArrays(key, it)
-        is ArrayList<*> -> bundle.putArrayList(key, it)
-      }
+      DataConvert.putDataToBundle(bundle, key, it)
       index++
     }
     invokeObject(bundle, field, any)
     return true
-  }
-
-  private fun Bundle.putStringArrays(key: String, array: Array<*>) {
-    if (array::class.java.componentType == String::class.java) {
-      putStringArray(key, array as? Array<String>?)
-    } else if (array::class.java.componentType == Parcelable::class.java) {
-      putParcelableArray(key, array as? Array<Parcelable>?)
-    }
-  }
-
-  private fun Bundle.putArrayList(key: String, array: ArrayList<*>) {
-    when (array.getOrNull(0)) {
-      is String -> putStringArrayList(key, array as? ArrayList<String>?)
-      is Int -> putIntegerArrayList(key, array as? ArrayList<Int>)
-      is Parcelable -> putParcelableArrayList(key, array as? ArrayList<Parcelable>)
-      is CharSequence -> putCharSequenceArrayList(key, array as? ArrayList<CharSequence>)
-    }
   }
 
   private fun getInitDataStructure(field: Field): InitDataStructure? {
@@ -371,44 +272,14 @@ object Parrot {
       val key = initialClassParam.value[index]
       val data = bundle.get(key)
       val paramType = parameterTypes?.getOrNull(index)
-      if (data != null && paramType != null && !any.isIntercept(key, data)) {
-        when (getType(data)) {
-          paramType -> params.add(data)
-          String::class.java -> params.add(getDataFromString(paramType, data as String))
-          else -> params.add(null)
-        }
+      if (paramType != null) {
+        val convertData = DataConvert.getConvertData(paramType, data)
+        params.add(if (!any.isIntercept(key, data, convertData)) convertData else null)
       } else {
         params.add(null)
       }
     }
     return constructor?.newInstance(*params.toTypedArray())
-  }
-
-  private fun getDataFromString(clazz: Class<*>, string: String): Any? {
-    try {
-      when (clazz) {
-        Int::class.java -> return string.toInt()
-        Float::class.java -> return string.toFloat()
-        Byte::class.java -> return string.toByte()
-        Double::class.java -> return string.toDouble()
-        Long::class.java -> return string.toLong()
-        Boolean::class.java -> return string.toBoolean()
-        Short::class.java -> return string.toShort()
-        String::class.java -> return string
-        Char::class.java -> {
-          return if (string.length == 1) {
-            string[0]
-          } else {
-            null
-          }
-        }
-        else -> return getJsonObject(string, clazz)
-      }
-    } catch (e: NumberFormatException) {
-      e.printStackTrace()
-      logE("String to $clazz catch NumberFormatException data: $string")
-    }
-    return null
   }
 
   private fun getParamInstance(
@@ -424,86 +295,13 @@ object Parrot {
     }
     val param = mutableListOf<Any?>()
     constructor.parameterTypes?.forEach {
-      val value: Any? = when (it) {
-        Int::class.java -> 0
-        Float::class.java -> 0
-        Byte::class.java -> 0
-        Double::class.java -> 0
-        Long::class.java -> 0L
-        Char::class.java -> 0
-        Boolean::class.java -> false
-        Short::class.java -> 0
-        String::class.java -> ""
-        else -> null
-      }
-      param.add(value)
+      param.add(DataConvert.getDefaultValue(it))
     }
     return constructor.newInstance(*param.toTypedArray())
   }
 
   private fun getInitialClassParam(field: Field): InitClassParam? {
     return field.getAnnotation(InitClassParam::class.java)
-  }
-
-  /**
-   * 通过is来判断此数据的类型
-   * 用来兼容Java和Kotlin的基本类型无法直接对比的问题
-   */
-  private fun getType(any: Any): Class<*> {
-    when (any) {
-      is Int -> return Int::class.java
-      is Float -> return Float::class.java
-      is Byte -> return Byte::class.java
-      is Double -> return Double::class.java
-      is Long -> return Long::class.java
-      is Char -> return Char::class.java
-      is Boolean -> return Boolean::class.java
-      is Short -> return Short::class.java
-      is String -> return String::class.java
-    }
-    return any::class.java
-  }
-
-  private fun invokeField(data: Any?, field: Field, any: Any): Boolean {
-    data ?: return false
-    if (getType(data) == field.type) {
-      invokeObject(data, field, any)
-    } else if (data::class.java == String::class.java && stringToData(
-        field,
-        data as? String,
-        any
-      )
-    ) {
-      logD("string to ${field.type} success  data: $data")
-    } else if (field.type == String::class.java) {
-      invokeObject(data.toString(), field, any)
-    } else {
-      return false
-    }
-    return true
-  }
-
-  private fun stringToData(field: Field, string: String?, any: Any): Boolean {
-    if (string.isNullOrEmpty()) {
-      return false
-    }
-    getDataFromString(field.type, string)?.let {
-      invokeObject(it, field, any)
-      return true
-    }
-    return false
-  }
-
-  private fun getJsonObject(data: String?, type: Class<*>): Any? {
-    data ?: return null
-    var filedObject: Any? = null
-    try {
-      filedObject = mGson.fromJson(data, type)
-    } catch (e: JsonSyntaxException) {
-      e.printStackTrace()
-      logE("parse $type catch JsonSyntaxException json :$data")
-    }
-    return filedObject
   }
 
   private fun invokeObject(data: Any, field: Field, any: Any) {
@@ -549,6 +347,10 @@ interface InjectInterceptor {
    * 注入参数时的回调方法，在被注入的class中实现此接口
    * 即可接收到注入事件回掉，可通过返回值拦截注入事件
    * @return true 为拦截此注入事件 otherwise 继续注入
+   *
+   * @param key bundleKey
+   * @param original 原始数据
+   * @param convertData 转化后的数据
    */
-  fun onInject(key: String, any: Any?): Boolean
+  fun onInject(key: String, original: Any?, convertData: Any?): Boolean
 }

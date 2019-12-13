@@ -46,7 +46,7 @@ public class ThreeActivity extends BaseActivity {
   private Set set;
   @InitDataStructure({"int","long","double","longString","floatString"})
   private List list;
-  @InitDataStructure({"int","intString"})
+  @InitDataStructure({"int","long","double","longString","floatString"})
   private int[] intArray;
   @InitDataStructure({"int","intString"})
   private int[] intArray1;
@@ -81,7 +81,9 @@ public class ThreeActivity extends BaseActivity {
     Log.d("ThreeActivity",""+set.size());
     Log.d("ThreeActivity",""+list.size());
     Log.d("ThreeActivity",""+intArray.length);
-    Log.d("ThreeActivity",""+intArray1.length);
+    for (int i1 : intArray) {
+      Log.d("ThreeActivity","intArray1  "+i1);
+    }
   }
 
 }
