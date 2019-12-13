@@ -23,7 +23,6 @@ class MainActivity : BaseActivity() {
   private var jsonObject: String = ""
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    DataConvert.jsonConvert = MyJsonConvert()
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     printParam()
