@@ -141,7 +141,7 @@ object DataConvert {
       filedObject = jsonConvert?.fromJson(data, type)
     } catch (e: Exception) {
       e.printStackTrace()
-      logE("parse $type catch JsonSyntaxException json :$data")
+      logE("parse $type catch ${e::class.java} json :$data")
     }
     return filedObject
   }
