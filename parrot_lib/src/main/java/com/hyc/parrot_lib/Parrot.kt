@@ -245,11 +245,19 @@ object Parrot {
     val map: MutableMap<String, Any?> =
       field.get(any) as? MutableMap<String, Any?> ?: mutableMapOf()
     for (index in 0 until length) {
-      map[initDataStructure.mapKey.getOrElse(index) { initDataStructure.value[index] }] =
+      map[initDataStructure.getTargetKey(index)] =
         dataList[index]
     }
     invokeObject(map, field, any)
     return true
+  }
+
+  private fun InitDataStructure.getTargetKey(index: Int): String {
+    return if (index >= 0 && index <= mapKey.lastIndex) {
+      mapKey[index]
+    } else {
+      value[index]
+    }
   }
 
   private fun injectBundle(
@@ -261,7 +269,7 @@ object Parrot {
     val bundle = field.get(any) as? Bundle ?: Bundle()
     var index = 0
     dataList.forEach {
-      val key = initDataStructure.mapKey.getOrElse(index) { initDataStructure.value[index] }
+      val key = initDataStructure.getTargetKey(index)
       DataConvert.putDataToBundle(bundle, key, it)
       index++
     }
