@@ -104,8 +104,9 @@ object Parrot {
             DataConvert.getConvertData(field.type, data)?.let {
               if (!any.isIntercept(key, data, it)) {
                 invokeObject(it, field, any)
-                keyMap.signDeal(key)
               }
+              //不管拦截不拦截都标记为处理
+              keyMap.signDeal(key)
             }
           }
         }
