@@ -26,6 +26,11 @@ object Parrot {
   private var enableNameKey = true
 
   @JvmStatic
+  fun initJsonConvert(jsonConvert: JsonConvert){
+    DataConvert.jsonConvert = jsonConvert
+  }
+
+  @JvmStatic
   fun initParam(bundle: Bundle, any: Any) {
     val startTime = System.currentTimeMillis()
     initParamInternal(bundle, any)
@@ -186,10 +191,10 @@ object Parrot {
     return false
   }
 
-  private fun Field.getActualType(): Class<*> {
+  private inline fun Field.getActualType(default: () -> Class<*>): Class<*> {
     this.type.componentType?.let { return it }
     return (this.genericType as? ParameterizedType)?.actualTypeArguments
-      ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*> ?: Any::class.java
+      ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*> ?: default()
   }
 
   private fun getDataList(
@@ -198,7 +203,7 @@ object Parrot {
     initialMapParam: InitDataStructure,
     bundle: Bundle
   ): MutableList<Any?> {
-    val clazz = field.getActualType()
+    val clazz = field.getActualType { Any::class.java }
     val isBundle = field.type == Bundle::class.java
     val resList = mutableListOf<Any?>()
     initialMapParam.value.forEach {

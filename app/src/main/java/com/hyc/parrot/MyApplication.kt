@@ -1,7 +1,7 @@
 package com.hyc.parrot
 
 import android.app.Application
-import com.hyc.parrot_lib.DataConvert
+import com.hyc.parrot_lib.Parrot
 
 /**
  * @author: 贺宇成
@@ -12,7 +12,7 @@ class MyApplication : Application() {
 
   override fun onCreate() {
     super.onCreate()
-    DataConvert.jsonConvert = MyJsonConvert()
+    Parrot.initJsonConvert(MyJsonConvert())
   }
 
 

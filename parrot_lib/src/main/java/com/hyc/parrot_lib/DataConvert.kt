@@ -18,7 +18,7 @@ object DataConvert {
   /**
    * Json转化类，由业务自行实现
    */
-  var jsonConvert: JsonConvert? = null
+  internal var jsonConvert: JsonConvert? = null
 
   /**
    * 获取转化后的数据
