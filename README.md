@@ -1,7 +1,50 @@
 # Parrot
 自动将Bundle数据注入页面参数
 
+## 功能
 
+```kotlin
+
+@kotlin.annotation.Retention(RUNTIME)
+@kotlin.annotation.Target(
+  FIELD
+)
+annotation class InitParam(
+  /**
+   * Bundle解析参数key,可设置多个key
+   */
+  vararg val value: String = []
+)
+
+/**
+ * 标识此参数是一个初始类型参数
+ * 即可将Bundle中的数据注入此类的属性中
+ */
+@kotlin.annotation.Retention(RUNTIME)
+@kotlin.annotation.Target(
+  FIELD
+)
+annotation class InitClassParam(
+  vararg val value: String = []
+)
+
+//支持 List、Set、Array、Map、Bundle
+@kotlin.annotation.Retention(RUNTIME)
+@kotlin.annotation.Target(
+  FIELD
+)
+annotation class InitDataStructure(
+  /**
+   * Bundle解析参数key
+   */
+  vararg val value: String = [],
+  /**
+   * map or Bundle 使用时可设置对应的mapKey
+   */
+  val mapKey: Array<String> = []
+)
+
+```
 
 
 ## 使用 

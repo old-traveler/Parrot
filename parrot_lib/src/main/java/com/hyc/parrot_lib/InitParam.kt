@@ -32,6 +32,7 @@ annotation class InitClassParam(
   vararg val value: String = []
 )
 
+//支持 List、Set、Array、Map、Bundle
 @kotlin.annotation.Retention(RUNTIME)
 @kotlin.annotation.Target(
   FIELD
@@ -42,7 +43,7 @@ annotation class InitDataStructure(
    */
   vararg val value: String = [],
   /**
-   * map使用时可设置对应的mapKey
+   * map or Bundle 使用时可设置对应的mapKey
    */
   val mapKey: Array<String> = []
 )
