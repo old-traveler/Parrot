@@ -21,6 +21,7 @@ object Parrot {
   private const val tag = "Parrot"
   private val enableLog = BuildConfig.DEBUG
   private val dataConvert = DataConvert()
+  private val cacheAdapter = CacheAdapter(dataConvert)
   /**
    * 是否允许用field的name作为bundleKey
    */
@@ -29,6 +30,14 @@ object Parrot {
   @JvmStatic
   fun initJsonConvert(jsonConvert: JsonConvert){
     dataConvert.jsonConvert = jsonConvert
+  }
+
+  fun initSharedPreferences(clazz: Class<*>){
+    cacheAdapter.sharedPreferencesClass = clazz
+  }
+
+  fun saveCacheParam(any : Any){
+    cacheAdapter.saveCacheParam(any)
   }
 
   @JvmStatic
@@ -95,7 +104,7 @@ object Parrot {
         }
         initialClassParam != null -> {
           //此field为一个类型参数，可将bundle数据注入到此对象中
-          field.isAccessible = true
+          field.enableAccessible()
           val param = field.get(any) ?: getParamInstance(field)
           initParamInternal(bundle, param, keyMap)
           invokeObject(param, field, any)
@@ -106,7 +115,7 @@ object Parrot {
           val key = paramName?.belongToSet(keyMap)
           val data = bundle.get(key)
           if (key?.isNotEmpty() == true) {
-            field.isAccessible = true
+            field.enableAccessible()
             dataConvert.getConvertData(field.type, data)?.let {
               if (!any.isIntercept(key, data, it)) {
                 invokeObject(it, field, any)
@@ -116,6 +125,10 @@ object Parrot {
             }
           }
         }
+      }
+      cacheAdapter.isCacheParam { field }?.let {
+        cacheAdapter.initCacheParam(any,field,it)
+        logD("init cache field : ${field.name}")
       }
     }
 
@@ -146,6 +159,10 @@ object Parrot {
     }
   }
 
+  private fun Field.enableAccessible(){
+    if (!isAccessible) isAccessible = true
+  }
+
   /**
    * 获取当前注入目标对象是否为拦截器类型，如果是拦截器类型并且拦截注入事件
    * 则停止注入行为，跳过此key。{跳过的key也会被认为已处理，不打印错误信息}
@@ -168,7 +185,7 @@ object Parrot {
     initialMapParam: InitDataStructure
   ): Boolean {
     if (initialMapParam.value.isEmpty()) return false
-    field.isAccessible = true
+    field.enableAccessible()
     val dataList = getDataList(field, any, initialMapParam, bundle)
     if (field.type.isArray) {
       return injectArray(dataList, field, any)
@@ -192,7 +209,7 @@ object Parrot {
     return false
   }
 
-  private inline fun Field.getActualType(default: () -> Class<*>): Class<*> {
+  inline fun Field.getActualType(default: () -> Class<*>): Class<*> {
     this.type.componentType?.let { return it }
     return (this.genericType as? ParameterizedType)?.actualTypeArguments
       ?.getOrNull(if (this.type == Map::class.java) 1 else 0) as? Class<*> ?: default()
@@ -294,7 +311,7 @@ object Parrot {
     initialClassParam: InitClassParam,
     any: Any
   ): Any? {
-    field.isAccessible = true
+    field.enableAccessible()
     var constructor: Constructor<*>? = null
     field.type.declaredConstructors?.forEach {
       if (it.parameterTypes?.size == initialClassParam.value.size) {

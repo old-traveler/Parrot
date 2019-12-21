@@ -9,6 +9,7 @@ import com.hyc.parrot_lib.InitClassParam
 import com.hyc.parrot_lib.InitDataStructure
 import com.hyc.parrot_lib.InitParam
 import com.hyc.parrot_lib.InjectInterceptor
+import kotlinx.android.synthetic.main.activity_main.tv_title
 
 /**
  * @author: 贺宇成
@@ -22,7 +23,6 @@ class SecondActivity : BaseActivity() , InjectInterceptor {
     }
     return false
   }
-
 
   private var int: String = ""
   private var long: Long = 2
@@ -65,6 +65,9 @@ class SecondActivity : BaseActivity() , InjectInterceptor {
     setContentView(R.layout.activity_main)
     printParam()
     toThreeActivity()
+    tv_title.setOnClickListener {
+      toThreeActivity()
+    }
   }
 
   private fun toThreeActivity() {

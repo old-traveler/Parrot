@@ -2,6 +2,9 @@ package com.hyc.parrot;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
+import com.hyc.parrot_lib.InitCache;
 import com.hyc.parrot_lib.InitClassParam;
 import com.hyc.parrot_lib.InitDataStructure;
 import com.hyc.parrot_lib.InitParam;
@@ -51,12 +54,23 @@ public class ThreeActivity extends BaseActivity {
   @InitDataStructure({"int","intString"})
   private int[] intArray1;
 
+  @InitCache("clickCount")
+  private int clickCount = 0;
+
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     printParam();
+    final TextView tvTitle = findViewById(R.id.tv_title);
+    tvTitle.setText("共计点击了多少次："+clickCount);
+    tvTitle.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        tvTitle.setText("共计点击了多少次："+(++clickCount));
+      }
+    });
 
   }
 

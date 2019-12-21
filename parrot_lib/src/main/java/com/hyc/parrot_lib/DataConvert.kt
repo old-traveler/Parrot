@@ -134,7 +134,7 @@ class DataConvert {
    * 将Json转化为对应的对象
    * 业务自行实现转化行为
    */
-  private fun getJsonObject(data: String?, type: Class<*>): Any? {
+  fun getJsonObject(data: String?, type: Class<*>): Any? {
     data ?: return null
     var filedObject: Any? = null
     try {

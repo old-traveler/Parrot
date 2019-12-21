@@ -15,4 +15,9 @@ open class BaseActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     Parrot.initParam(intent.extras ?: Bundle(),this)
   }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    Parrot.saveCacheParam(this)
+  }
 }
