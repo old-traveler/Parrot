@@ -13,7 +13,7 @@ import java.io.Serializable
  * @date: 2019-12-13 09:42
  * @desc: 数据转换类
  */
-object DataConvert {
+class DataConvert {
 
   /**
    * Json转化类，由业务自行实现

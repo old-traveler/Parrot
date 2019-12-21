@@ -20,6 +20,7 @@ object Parrot {
 
   private const val tag = "Parrot"
   private val enableLog = BuildConfig.DEBUG
+  private val dataConvert = DataConvert()
   /**
    * 是否允许用field的name作为bundleKey
    */
@@ -27,7 +28,7 @@ object Parrot {
 
   @JvmStatic
   fun initJsonConvert(jsonConvert: JsonConvert){
-    DataConvert.jsonConvert = jsonConvert
+    dataConvert.jsonConvert = jsonConvert
   }
 
   @JvmStatic
@@ -106,7 +107,7 @@ object Parrot {
           val data = bundle.get(key)
           if (key?.isNotEmpty() == true) {
             field.isAccessible = true
-            DataConvert.getConvertData(field.type, data)?.let {
+            dataConvert.getConvertData(field.type, data)?.let {
               if (!any.isIntercept(key, data, it)) {
                 invokeObject(it, field, any)
               }
@@ -208,7 +209,7 @@ object Parrot {
     val resList = mutableListOf<Any?>()
     initialMapParam.value.forEach {
       val data = bundle.get(it)
-      val convertData = if (isBundle) data else DataConvert.getConvertData(
+      val convertData = if (isBundle) data else dataConvert.getConvertData(
         clazz,
         data
       )
@@ -220,7 +221,7 @@ object Parrot {
   }
 
   private fun injectArray(dataList: MutableList<Any?>, field: Field, any: Any): Boolean {
-    DataConvert.toArray(dataList, field.type.componentType)?.let {
+    dataConvert.toArray(dataList, field.type.componentType)?.let {
       invokeObject(it, field, any)
       return true
     }
@@ -276,7 +277,7 @@ object Parrot {
     var index = 0
     dataList.forEach {
       val key = initDataStructure.getTargetKey(index)
-      DataConvert.putDataToBundle(bundle, key, it)
+      dataConvert.putDataToBundle(bundle, key, it)
       index++
     }
     invokeObject(bundle, field, any)
@@ -310,7 +311,7 @@ object Parrot {
       val data = bundle.get(key)
       val paramType = parameterTypes?.getOrNull(index)
       if (paramType != null) {
-        val convertData = DataConvert.getConvertData(paramType, data)
+        val convertData = dataConvert.getConvertData(paramType, data)
         params.add(if (!any.isIntercept(key, data, convertData)) convertData else null)
       } else {
         params.add(null)
@@ -332,7 +333,7 @@ object Parrot {
     }
     val param = mutableListOf<Any?>()
     constructor.parameterTypes?.forEach {
-      param.add(DataConvert.getDefaultValue(it))
+      param.add(dataConvert.getDefaultValue(it))
     }
     return constructor.newInstance(*param.toTypedArray())
   }
