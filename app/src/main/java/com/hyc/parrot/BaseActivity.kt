@@ -18,6 +18,10 @@ open class BaseActivity : AppCompatActivity() {
 
   override fun onDestroy() {
     super.onDestroy()
+  }
+
+  override fun onPause() {
+    super.onPause()
     Parrot.saveCacheParam(this)
   }
 }
