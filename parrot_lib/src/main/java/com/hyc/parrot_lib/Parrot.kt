@@ -32,8 +32,8 @@ object Parrot {
     dataConvert.jsonConvert = jsonConvert
   }
 
-  fun initSharedPreferences(clazz: Class<*>) {
-    cacheAdapter.sharedPreferencesClass = clazz
+  fun initDefaultSpname(name : String){
+    cacheAdapter.defaultSpName
   }
 
   fun saveCacheParam(any: Any) {

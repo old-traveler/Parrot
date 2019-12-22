@@ -16,7 +16,6 @@ class MyApplication : Application() {
     super.onCreate()
     context = this.applicationContext
     Parrot.initJsonConvert(MyJsonConvert())
-    Parrot.initSharedPreferences(MySharedPreferences::class.java)
   }
 
   companion object {

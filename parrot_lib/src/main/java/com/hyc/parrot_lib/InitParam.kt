@@ -48,11 +48,13 @@ annotation class InitDataStructure(
   val mapKey: Array<String> = []
 )
 
-
 @kotlin.annotation.Retention(RUNTIME)
 @kotlin.annotation.Target(
   FIELD
 )
 annotation class InitCache(
-  vararg val value : String = []
+  vararg val value: String = [],
+  val spName: String = "",
+  val prefixField: String = "",
+  val onlyRead: Boolean = false
 )

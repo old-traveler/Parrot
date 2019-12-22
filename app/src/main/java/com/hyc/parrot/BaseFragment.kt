@@ -16,4 +16,8 @@ open class BaseFragment : Fragment() {
     Parrot.initParam(this)
   }
 
+  override fun onPause() {
+    super.onPause()
+  }
+
 }

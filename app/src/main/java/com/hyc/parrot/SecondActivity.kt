@@ -16,9 +16,9 @@ import kotlinx.android.synthetic.main.activity_main.tv_title
  * @date: 2019-12-08 17:29
  * @desc:
  */
-class SecondActivity : BaseActivity() , InjectInterceptor {
+class SecondActivity : BaseActivity(), InjectInterceptor {
   override fun onInject(key: String, original: Any?, convertData: Any?): Boolean {
-    if (key == "floatString"){
+    if (key == "floatString") {
       return true
     }
     return false
@@ -90,9 +90,7 @@ class SecondActivity : BaseActivity() , InjectInterceptor {
     bundle.putDouble("str2", 98.38024)
     bundle.putString("studentId", "15508944320")
     bundle.putSerializable("userBean", userBean)
-    Handler().postDelayed({
-      startActivity(Intent(this, ThreeActivity::class.java).putExtras(bundle))
-    }, 3000)
+    startActivity(Intent(this, ThreeActivity::class.java).putExtras(bundle))
   }
 
   private fun printParam() {
@@ -110,22 +108,22 @@ class SecondActivity : BaseActivity() , InjectInterceptor {
     Log.d("SecondActivity", "$beike")
     Log.d("SecondActivity", "$student")
     intArray.forEach {
-      Log.d("SecondActivity","intArray: $it")
+      Log.d("SecondActivity", "intArray: $it")
     }
     intArray1.forEach {
-      Log.d("SecondActivity","intArray1: $it")
+      Log.d("SecondActivity", "intArray1: $it")
     }
     stringList.forEach {
-      Log.d("SecondActivity","stringList: $it")
+      Log.d("SecondActivity", "stringList: $it")
     }
-    numberSet.forEach{
-      Log.d("SecondActivity","numberSet: $it")
+    numberSet.forEach {
+      Log.d("SecondActivity", "numberSet: $it")
     }
     map.forEach {
-      Log.d("SecondActivity","key: ${it.key}  value ${it.value}")
+      Log.d("SecondActivity", "key: ${it.key}  value ${it.value}")
     }
     bundle.keySet()?.forEach {
-      Log.d("SecondActivity","bundleKey: $it  value ${bundle.get(it)}")
+      Log.d("SecondActivity", "bundleKey: $it  value ${bundle.get(it)}")
     }
   }
 
