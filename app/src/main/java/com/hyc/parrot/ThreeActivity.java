@@ -54,12 +54,15 @@ public class ThreeActivity extends BaseActivity {
   @InitDataStructure({"int","intString"})
   private int[] intArray1;
 
-  @InitCache("clickCount")
+  private String prefix;
+
+  @InitCache(value = "clickCount",prefixField = "prefix")
   private int clickCount = 0;
 
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
+    prefix = this.getClass().getSimpleName();
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     printParam();

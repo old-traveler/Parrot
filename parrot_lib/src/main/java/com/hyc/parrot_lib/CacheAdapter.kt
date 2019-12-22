@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
 import android.support.v4.app.Fragment
 import com.hyc.parrot_lib.Parrot.getActualType
+import com.hyc.parrot_lib.Parrot.enableAccessible
 import com.hyc.parrot_lib.Parrot.logD
 import java.lang.RuntimeException
 import java.lang.ref.WeakReference
@@ -19,6 +20,8 @@ import java.lang.reflect.Field
 class CacheAdapter(private val dataConvert: DataConvert) {
 
   var defaultSpName: String = "Parrot"
+
+  var defaultPrefixProvider: PrefixProvider? = null
 
   private val spMap: MutableMap<String, WeakReference<SharedPreferences>> = mutableMapOf()
 
@@ -39,6 +42,25 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     return field()?.getAnnotation(InitCache::class.java)
   }
 
+  private fun getRealKey(any: Any, initCache: InitCache, index: Int = 0): String {
+    if (initCache.prefixField.isNotEmpty()) {
+      val field = any::class.java.getDeclaredField(initCache.prefixField)
+      field.enableAccessible()
+      return field.get(any).toString()
+    } else if (any is PrefixProvider) {
+      return any.getRealKey(initCache.value[index])
+    }
+    return defaultPrefixProvider?.getRealKey(initCache.value[index]) ?: initCache.value[index]
+  }
+
+  private fun getRealKeyList(any: Any, initCache: InitCache): List<String> {
+    val list = mutableListOf<String>()
+    for (index in initCache.value.indices) {
+      list.add(getRealKey(any, initCache, index))
+    }
+    return list
+  }
+
   fun initCacheParam(
     any: Any,
     field: Field,
@@ -49,7 +71,12 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     when {
       initCache.value.isEmpty() -> throw RuntimeException("initCache must have a key")
       initCache.value.size == 1 -> {
-        getDataByClass(field.type, sharedPreferences, initCache.value[0], field.get(any))?.let {
+        getDataByClass(
+          field.type,
+          sharedPreferences,
+          getRealKey(any, initCache),
+          field.get(any)
+        )?.let {
           field.set(any, it)
         }
       }
@@ -81,22 +108,27 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     when {
       initCache.value.isEmpty() -> throw RuntimeException("initCache must have a key")
       initCache.value.size == 1 -> {
-        saveDataByClass(field.type, initCache.value[0], field.get(any), editor)
+        saveDataByClass(field.type, getRealKey(any, initCache), field.get(any), editor)
       }
       field.type.isArray -> {
-        saveArray(field.get(any), field.getActualType { Any::class.java }, initCache, editor)
+        saveArray(
+          field.get(any),
+          field.getActualType { Any::class.java },
+          getRealKeyList(any, initCache),
+          editor
+        )
       }
       else -> when (field.type) {
         List::class.java -> saveList(
           field.get(any) as List<*>,
           field.getActualType { Any::class.java },
-          initCache,
+          getRealKeyList(any, initCache),
           editor
         )
         Map::class.java -> saveMap(
           field.get(any) as Map<String, *>,
           field.getActualType { Any::class.java },
-          initCache,
+          getRealKeyList(any, initCache),
           editor
         )
         else -> throw RuntimeException("unknown type ${field.type}")
@@ -105,46 +137,46 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     editor.apply()
   }
 
-  private fun saveList(list: List<*>, clazz: Class<*>, initCache: InitCache, editor: Editor) {
+  private fun saveList(list: List<*>, clazz: Class<*>, keyList: List<String>, editor: Editor) {
     var index = 0
-    initCache.value.forEach { key ->
+    keyList.forEach { key ->
       list[index++]?.let { saveDataByClass(clazz, key, it, editor) }
     }
   }
 
-  private fun saveMap(map: Map<String, *>, clazz: Class<*>, initCache: InitCache, editor: Editor) {
-    initCache.value.forEach { key ->
+  private fun saveMap(map: Map<String, *>, clazz: Class<*>, keyList: List<String>, editor: Editor) {
+    keyList.forEach { key ->
       map[key]?.let { saveDataByClass(clazz, key, it, editor) }
     }
   }
 
-  private fun saveArray(array: Any, clazz: Class<*>, initCache: InitCache, editor: Editor) {
+  private fun saveArray(array: Any, clazz: Class<*>, keyList: List<String>, editor: Editor) {
     var index = 0
     when (array) {
       is Array<*> -> {
-        initCache.value.forEach { key ->
+        keyList.forEach { key ->
           array[index++]?.let {
             saveDataByClass(clazz, key, it, editor)
           }
         }
       }
       is IntArray -> {
-        initCache.value.forEach { key ->
+        keyList.forEach { key ->
           saveDataByClass(clazz, key, array[index++], editor)
         }
       }
       is LongArray -> {
-        initCache.value.forEach { key ->
+        keyList.forEach { key ->
           saveDataByClass(clazz, key, array[index++], editor)
         }
       }
       is FloatArray -> {
-        initCache.value.forEach { key ->
+        keyList.forEach { key ->
           saveDataByClass(clazz, key, array[index++], editor)
         }
       }
       is BooleanArray -> {
-        initCache.value.forEach { key ->
+        keyList.forEach { key ->
           saveDataByClass(clazz, key, array[index++], editor)
         }
       }
@@ -159,8 +191,15 @@ class CacheAdapter(private val dataConvert: DataConvert) {
   ) {
     val clazz = field.getActualType { Any::class.java }
     val list = mutableListOf<Any?>()
-    initCache.value.forEach {
-      list.add(getDataByClass(clazz, sharedPreferences, it, dataConvert.getDefaultValue(clazz)))
+    getRealKeyList(any, initCache).forEach {
+      list.add(
+        getDataByClass(
+          clazz,
+          sharedPreferences,
+          it,
+          dataConvert.getDefaultValue(clazz)
+        )
+      )
     }
     field.set(any, dataConvert.toArray(list, clazz))
   }
@@ -173,8 +212,15 @@ class CacheAdapter(private val dataConvert: DataConvert) {
   ) {
     val clazz = field.getActualType { Any::class.java }
     val list = mutableListOf<Any?>()
-    initCache.value.forEach {
-      list.add(getDataByClass(clazz, sharedPreferences, it, dataConvert.getDefaultValue(clazz)))
+    getRealKeyList(any, initCache).forEach {
+      list.add(
+        getDataByClass(
+          clazz,
+          sharedPreferences,
+          it,
+          dataConvert.getDefaultValue(clazz)
+        )
+      )
     }
     field.set(any, list)
   }
@@ -187,7 +233,7 @@ class CacheAdapter(private val dataConvert: DataConvert) {
   ) {
     val clazz = field.getActualType { Any::class.java }
     val map = mutableMapOf<String, Any?>()
-    initCache.value.forEach {
+    getRealKeyList(any, initCache).forEach {
       map[it] = getDataByClass(clazz, sharedPreferences, it, dataConvert.getDefaultValue(clazz))
     }
     field.set(any, map)
@@ -199,6 +245,7 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     key: String,
     default: Any?
   ): Any? {
+    logD("get cache data $key ")
     return when (clazz) {
       Int::class.java -> sharedPreferences.getInt(key, default as Int)
       Float::class.java -> sharedPreferences.getFloat(key, default as Float)
@@ -228,6 +275,7 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     value: Any,
     editor: Editor
   ) {
+    logD("save $key   value $value")
     when (clazz) {
       Int::class.java -> editor.putInt(key, value as Int)
       Float::class.java -> editor.putFloat(key, value as Float)
@@ -241,4 +289,8 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     }
   }
 
+}
+
+interface PrefixProvider {
+  fun getRealKey(key: String): String
 }

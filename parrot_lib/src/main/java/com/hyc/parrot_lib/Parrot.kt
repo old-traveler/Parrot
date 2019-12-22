@@ -32,8 +32,12 @@ object Parrot {
     dataConvert.jsonConvert = jsonConvert
   }
 
-  fun initDefaultSpname(name : String){
+  fun initDefaultSpname(name: String) {
     cacheAdapter.defaultSpName
+  }
+
+  fun initDefaultPrefixProvider(prefixProvider: PrefixProvider) {
+    cacheAdapter.defaultPrefixProvider = prefixProvider
   }
 
   fun saveCacheParam(any: Any) {
@@ -167,7 +171,7 @@ object Parrot {
     }
   }
 
-  private fun Field.enableAccessible() {
+  fun Field.enableAccessible() {
     if (!isAccessible) isAccessible = true
   }
 
