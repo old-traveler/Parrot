@@ -25,8 +25,8 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     return mSharedPreferences!!
   }
 
-  inline fun isCacheParam(field: () -> Field): InitCache? {
-    return field().getAnnotation(InitCache::class.java)
+  inline fun isCacheParam(field: () -> Field?): InitCache? {
+    return field()?.getAnnotation(InitCache::class.java)
   }
 
   fun initCacheParam(any: Any, field: Field, initCache: InitCache) {

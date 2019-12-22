@@ -28,15 +28,15 @@ object Parrot {
   private var enableNameKey = true
 
   @JvmStatic
-  fun initJsonConvert(jsonConvert: JsonConvert){
+  fun initJsonConvert(jsonConvert: JsonConvert) {
     dataConvert.jsonConvert = jsonConvert
   }
 
-  fun initSharedPreferences(clazz: Class<*>){
+  fun initSharedPreferences(clazz: Class<*>) {
     cacheAdapter.sharedPreferencesClass = clazz
   }
 
-  fun saveCacheParam(any : Any){
+  fun saveCacheParam(any: Any) {
     cacheAdapter.saveCacheParam(any)
   }
 
@@ -44,6 +44,13 @@ object Parrot {
   fun initParam(bundle: Bundle, any: Any) {
     val startTime = System.currentTimeMillis()
     initParamInternal(bundle, any)
+    logD("initParam cost ${System.currentTimeMillis() - startTime}")
+  }
+
+  @JvmStatic
+  fun initBundle(bundle: Bundle, any: Any) {
+    val startTime = System.currentTimeMillis()
+    initParamInternal(bundle, any, initCacheParam = false)
     logD("initParam cost ${System.currentTimeMillis() - startTime}")
   }
 
@@ -75,7 +82,8 @@ object Parrot {
   private fun initParamInternal(
     bundle: Bundle,
     any: Any,
-    recursiveSet: MutableMap<String, Boolean>? = null
+    recursiveSet: MutableMap<String, Boolean>? = null,
+    initCacheParam: Boolean = true
   ) {
     val fields = any.javaClass.declaredFields
     val keyMap = recursiveSet ?: bundle.toKeyMap()
@@ -126,8 +134,8 @@ object Parrot {
           }
         }
       }
-      cacheAdapter.isCacheParam { field }?.let {
-        cacheAdapter.initCacheParam(any,field,it)
+      cacheAdapter.isCacheParam { if (initCacheParam) field else null }?.let {
+        cacheAdapter.initCacheParam(any, field, it)
         logD("init cache field : ${field.name}")
       }
     }
@@ -159,7 +167,7 @@ object Parrot {
     }
   }
 
-  private fun Field.enableAccessible(){
+  private fun Field.enableAccessible() {
     if (!isAccessible) isAccessible = true
   }
 
