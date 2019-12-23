@@ -43,14 +43,23 @@ class CacheAdapter(private val dataConvert: DataConvert) {
   }
 
   private fun getRealKey(any: Any, initCache: InitCache, index: Int = 0): String {
-    if (initCache.prefixField.isNotEmpty()) {
-      val field = any::class.java.getDeclaredField(initCache.prefixField)
-      field.enableAccessible()
-      return field.get(any).toString()
-    } else if (any is PrefixProvider) {
-      return any.getRealKey(initCache.value[index])
+    val originKey = initCache.value[index]
+    return when {
+      initCache.prefixField.isNotEmpty() -> {
+        val field = any::class.java.getDeclaredField(initCache.prefixField)
+        field.enableAccessible()
+        "${field.get(any)}-$originKey"
+      }
+      any is PrefixProvider && initCache.prefixKey.isNotEmpty() -> "${any.getKeyPrefix(
+        originKey,
+        initCache.prefixKey
+      )}-$originKey"
+      defaultPrefixProvider != null && initCache.prefixKey.isNotEmpty() -> "${defaultPrefixProvider!!.getKeyPrefix(
+        originKey,
+        initCache.prefixKey
+      )}-$originKey"
+      else -> originKey
     }
-    return defaultPrefixProvider?.getRealKey(initCache.value[index]) ?: initCache.value[index]
   }
 
   private fun getRealKeyList(any: Any, initCache: InitCache): List<String> {
@@ -292,5 +301,5 @@ class CacheAdapter(private val dataConvert: DataConvert) {
 }
 
 interface PrefixProvider {
-  fun getRealKey(key: String): String
+  fun getKeyPrefix(key: String,prefixKey : String): String
 }

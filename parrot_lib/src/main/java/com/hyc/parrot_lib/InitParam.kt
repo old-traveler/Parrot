@@ -56,5 +56,6 @@ annotation class InitCache(
   vararg val value: String = [],
   val spName: String = "",
   val prefixField: String = "",
+  val prefixKey: String = "",
   val onlyRead: Boolean = false
 )

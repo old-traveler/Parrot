@@ -16,6 +16,7 @@ class MyApplication : Application() {
     super.onCreate()
     context = this.applicationContext
     Parrot.initJsonConvert(MyJsonConvert())
+    Parrot.initDefaultPrefixProvider(MyPrefixProvider())
   }
 
   companion object {

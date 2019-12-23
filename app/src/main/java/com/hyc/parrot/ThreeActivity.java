@@ -56,7 +56,7 @@ public class ThreeActivity extends BaseActivity {
 
   private String prefix;
 
-  @InitCache(value = "clickCount",prefixField = "prefix")
+  @InitCache(value = "clickCount",prefixKey = MyPrefixProvider.DATE)
   private int clickCount = 0;
 
 
@@ -67,11 +67,11 @@ public class ThreeActivity extends BaseActivity {
     setContentView(R.layout.activity_main);
     printParam();
     final TextView tvTitle = findViewById(R.id.tv_title);
-    tvTitle.setText("共计点击了多少次："+clickCount);
+    tvTitle.setText("今日共计点击了多少次："+clickCount);
     tvTitle.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        tvTitle.setText("共计点击了多少次："+(++clickCount));
+        tvTitle.setText("今日共计点击了多少次："+(++clickCount));
       }
     });
 
