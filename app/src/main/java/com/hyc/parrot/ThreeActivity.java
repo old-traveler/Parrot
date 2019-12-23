@@ -13,6 +13,8 @@ import com.hyc.parrot_lib.InitCache;
 import com.hyc.parrot_lib.InitClassParam;
 import com.hyc.parrot_lib.InitDataStructure;
 import com.hyc.parrot_lib.InitParam;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,7 +66,7 @@ public class ThreeActivity extends BaseActivity {
   @InitCache(value = "clickCount", prefixKey = MyPrefixProvider.DATE)
   private int clickCount = 0;
 
-  @InitCache("curUser")
+  @InitCache(value = "curUser",spName = "user")
   private UserBean curUser;
 
   private EditText etAccount;
@@ -105,7 +107,9 @@ public class ThreeActivity extends BaseActivity {
         }
         curUser =
             new UserBean(etAccount.getText().toString(), etPassword.getText().toString(), 0, 0);
-        startActivity(new Intent(ThreeActivity.this,FourActivity.class));
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        String date =  format.format(new Date());
+        startActivity(new Intent(ThreeActivity.this,FourActivity.class).putExtra("date",date));
       }
     });
   }

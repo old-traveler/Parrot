@@ -138,20 +138,22 @@ object Parrot {
           }
         }
       }
-      cacheAdapter.isCacheParam { if (initCacheParam) field else null }?.let {
-        cacheAdapter.initCacheParam(any, field, it)
-        logD("init cache field : ${field.name}")
-      }
     }
 
     //打印未处理的key
-    recursiveSet ?: keyMap.forEach {
-      if (!it.value) {
-        logE(
-          "key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(
-            it.key
-          )}"
-        )
+    recursiveSet ?: let {
+      keyMap.forEach {
+        if (!it.value) {
+          logE(
+            "key: ${it.key} not deal in ${any::class.java.name} data : ${bundle.get(
+              it.key
+            )}"
+          )
+        }
+      }
+
+      if (initCacheParam) {
+        cacheAdapter.initCacheParam(any, fields)
       }
     }
   }

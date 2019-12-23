@@ -72,6 +72,18 @@ class CacheAdapter(private val dataConvert: DataConvert) {
 
   fun initCacheParam(
     any: Any,
+    fields: Array<out Field>
+  ) {
+    fields.forEach { field ->
+      isCacheParam { field }?.let {
+        initCacheParam(any, field, it)
+        logD("init cache field : ${field.name}")
+      }
+    }
+  }
+
+  private fun initCacheParam(
+    any: Any,
     field: Field,
     initCache: InitCache
   ) {
@@ -301,5 +313,5 @@ class CacheAdapter(private val dataConvert: DataConvert) {
 }
 
 interface PrefixProvider {
-  fun getKeyPrefix(key: String,prefixKey : String): String
+  fun getKeyPrefix(key: String, prefixKey: String): String
 }
