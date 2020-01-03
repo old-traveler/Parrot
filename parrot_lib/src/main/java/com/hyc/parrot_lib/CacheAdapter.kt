@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
 import android.support.v4.app.Fragment
 import com.hyc.parrot_lib.Parrot.getActualType
-import com.hyc.parrot_lib.Parrot.enableAccessible
 import com.hyc.parrot_lib.Parrot.logD
 import java.lang.RuntimeException
 import java.lang.ref.WeakReference
@@ -38,18 +37,13 @@ class CacheAdapter(private val dataConvert: DataConvert) {
     return sharedPreferences
   }
 
-  inline fun isCacheParam(field: () -> Field?): InitCache? {
+  private inline fun isCacheParam(field: () -> Field?): InitCache? {
     return field()?.getAnnotation(InitCache::class.java)
   }
 
   private fun getRealKey(any: Any, initCache: InitCache, index: Int = 0): String {
     val originKey = initCache.value[index]
     return when {
-      initCache.prefixField.isNotEmpty() -> {
-        val field = any::class.java.getDeclaredField(initCache.prefixField)
-        field.enableAccessible()
-        "${field.get(any)}-$originKey"
-      }
       any is PrefixProvider && initCache.prefixKey.isNotEmpty() -> "${any.getKeyPrefix(
         originKey,
         initCache.prefixKey
