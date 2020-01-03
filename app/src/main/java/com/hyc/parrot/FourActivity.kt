@@ -19,7 +19,7 @@ class FourActivity : BaseActivity() {
   @InitParam("date")
   private lateinit var date: String
 
-  @InitCache("loginCount", prefixField = "date")
+  @InitCache("loginCount", prefixKey = MyPrefixProvider.DATE)
   private var loginCount = 0
 
   override fun onCreate(savedInstanceState: Bundle?) {
