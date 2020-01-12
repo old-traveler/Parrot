@@ -155,6 +155,6 @@ in receive activity
 ## 混淆配置
 ```
 -keepclasseswithmembernames class * {
-    @com.hyc.helper.util.parrot.* <fields>;
+    @com.hyc.parrot_lib.* <fields>;
 }
 ```
