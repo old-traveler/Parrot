@@ -151,3 +151,10 @@ in receive activity
   private lateinit var bundle: Bundle
   
 ```
+
+## 混淆配置
+```
+-keepclasseswithmembernames class * {
+    @com.hyc.helper.util.parrot.* <fields>;
+}
+```
