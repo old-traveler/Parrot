@@ -1,6 +1,8 @@
 # Parrot
 自动将Bundle数据注入页面参数
 
+[![](https://jitpack.io/v/old-traveler/Parrot.svg)](https://jitpack.io/#old-traveler/Parrot)&nbsp;&nbsp;
+
 ## 功能
 
 ```kotlin
@@ -163,4 +165,11 @@ in receive activity
   @InitCache(value = "curUser",spName = "user")
   private UserBean curUser;
   
+```
+
+## 混淆配置
+```
+-keepclasseswithmembernames class * {
+    @com.hyc.parrot_lib.* <fields>;
+}
 ```
