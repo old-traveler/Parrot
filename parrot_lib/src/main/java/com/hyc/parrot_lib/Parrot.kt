@@ -173,7 +173,7 @@ object Parrot {
     }
   }
 
-  fun Field.enableAccessible() {
+  private fun Field.enableAccessible() {
     if (!isAccessible) isAccessible = true
   }
 

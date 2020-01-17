@@ -48,13 +48,14 @@ annotation class InitDataStructure(
   val mapKey: Array<String> = []
 )
 
+
 @kotlin.annotation.Retention(RUNTIME)
 @kotlin.annotation.Target(
   FIELD
 )
 annotation class InitCache(
   vararg val value: String = [],
-  val spName: String = "",
-  val prefixKey: String = "",
-  val onlyRead: Boolean = false
+  val spName: String = "", //指定改属性存储的sp文件名
+  val prefixKey: String = "", //设置属性存储key前缀表识并通过前缀提供接口返回其所需前缀
+  val onlyRead: Boolean = false //是否为只读变量，只读变量只做数据的读取，不会报错属性的修改
 )
